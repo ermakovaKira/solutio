@@ -7,6 +7,7 @@ namespace Solutio.UI
 {
     /// <summary>
     /// Контроллер процедурного размытия заднего плана (UI Blur / Frosted Glass) для модальных окон.
+    /// Анимация построена на плавной интерполяции альфа-канала и свойств шейдера без вызова SetActive.
     /// </summary>
     [RequireComponent(typeof(Image))]
     public sealed class UIBlurEffect : MonoBehaviour
@@ -29,6 +30,7 @@ namespace Solutio.UI
 
             if (blurMaterialTemplate != null)
             {
+                // Создаем независимый экземпляр материала
                 _instancedMaterial = new Material(blurMaterialTemplate);
                 _backgroundImage.material = _instancedMaterial;
             }
@@ -37,17 +39,18 @@ namespace Solutio.UI
                 Debug.LogWarning("[UIBlurEffect] Шаблон материала не назначен. Используется базовый цвет.");
             }
 
+            // Инициализация в скрытом состоянии (без вызова SetActive для сохранения плавности Canvas)
             SetBlurIntensity(0f);
             SetAlpha(0f);
-            gameObject.SetActive(false);
+            _backgroundImage.raycastTarget = false;
         }
 
         /// <summary>
-        /// Плавно активирует размытие фона.
+        /// Плавно активирует эффект размытия заднего плана.
         /// </summary>
         public void EnableBlur(Action onComplete = null)
         {
-            gameObject.SetActive(true);
+            _backgroundImage.raycastTarget = true;
             _blurTween?.Kill();
             _fadeTween?.Kill();
 
@@ -64,10 +67,11 @@ namespace Solutio.UI
         }
 
         /// <summary>
-        /// Плавно отключает размытие фона.
+        /// Плавно отключает эффект размытия заднего плана.
         /// </summary>
         public void DisableBlur(Action onComplete = null)
         {
+            _backgroundImage.raycastTarget = false;
             _blurTween?.Kill();
             _fadeTween?.Kill();
 
@@ -80,11 +84,7 @@ namespace Solutio.UI
             _fadeTween = _backgroundImage.DOFade(0f, animationDuration * 0.75f)
                 .SetEase(Ease.InQuad)
                 .SetUpdate(true)
-                .OnComplete(() =>
-                {
-                    gameObject.SetActive(false);
-                    onComplete?.Invoke();
-                });
+                .OnComplete(() => onComplete?.Invoke());
         }
 
         private void SetBlurIntensity(float value)
