@@ -28,6 +28,7 @@ namespace Solutio.UI
         [SerializeField] private Button switchToRegisterButton;
         [SerializeField] private Button togglePasswordButton;
         [SerializeField] private Image togglePasswordIcon;
+        [SerializeField] private Button forgotPasswordButton;
 
         [Header("Feedback Elements")]
         [SerializeField] private TextMeshProUGUI statusFeedbackText;
@@ -39,6 +40,7 @@ namespace Solutio.UI
         [SerializeField] private Color errorBorderColor = new Color(0.95f, 0.15f, 0.25f, 0.9f);
         [SerializeField] private Color successColor = new Color(0.2f, 0.95f, 0.5f, 1f);
         [SerializeField] private Color failureColor = new Color(0.95f, 0.25f, 0.25f, 1f);
+        [SerializeField] private TMP_Text subtitleText;
 
         // Логин: 3-20 латинских букв, цифр или подчеркиваний
         private static readonly Regex LoginRegex = new Regex(@"^[a-zA-Z0-9_]{3,20}$", RegexOptions.Compiled);
@@ -49,6 +51,7 @@ namespace Solutio.UI
 
         public event Action<string, string> OnLoginSubmitted;
         public event Action OnNavigateToRegisterRequested;
+        public event Action OnForgotPasswordRequested;
 
         private void Awake()
         {
@@ -77,6 +80,9 @@ namespace Solutio.UI
 
             loginInputField.onValueChanged.AddListener(_ => ClearFieldStatus(loginFieldBorder));
             passwordInputField.onValueChanged.AddListener(_ => ClearFieldStatus(passwordFieldBorder));
+
+            if (forgotPasswordButton != null)
+                forgotPasswordButton.onClick.AddListener(() => OnForgotPasswordRequested?.Invoke());
         }
 
         private void UnregisterEventHandlers()
@@ -86,6 +92,23 @@ namespace Solutio.UI
             togglePasswordButton.onClick.RemoveAllListeners();
             loginInputField.onValueChanged.RemoveAllListeners();
             passwordInputField.onValueChanged.RemoveAllListeners();
+            if (forgotPasswordButton != null)
+                forgotPasswordButton.onClick.RemoveAllListeners();
+        }
+
+        /// <summary>
+        /// Автоматически подставляет логин в поле ввода и переводит фокус на пароль.
+        /// </summary>
+        public void SetLogin(string login)
+        {
+            if (loginInputField != null)
+            {
+                loginInputField.text = login;
+                if (passwordInputField != null)
+                {
+                    passwordInputField.ActivateInputField();
+                }
+            }
         }
 
         public void ShowModal()
@@ -211,6 +234,8 @@ namespace Solutio.UI
             submitLoginButton.interactable = isInteractive;
             switchToRegisterButton.interactable = isInteractive;
             togglePasswordButton.interactable = isInteractive;
+            if (forgotPasswordButton != null)
+                forgotPasswordButton.interactable = isInteractive;
         }
 
         private void ResetFormState()
@@ -229,6 +254,20 @@ namespace Solutio.UI
         {
             if (rootCanvasGroup == null) rootCanvasGroup = GetComponent<CanvasGroup>();
             if (modalContainer == null) modalContainer = GetComponent<RectTransform>();
+        }
+    
+    /// <summary>
+        /// Включает или выключает поля авторизации при переходе в режим сброса пароля.
+        /// </summary>
+        public void SetFieldsActive(bool isActive)
+        {
+            if (loginInputField != null) loginInputField.gameObject.SetActive(isActive);
+            if (passwordInputField != null) passwordInputField.gameObject.SetActive(isActive);
+            if (submitLoginButton != null) submitLoginButton.gameObject.SetActive(isActive);
+            if (switchToRegisterButton != null) switchToRegisterButton.gameObject.SetActive(isActive);
+            if (forgotPasswordButton != null) forgotPasswordButton.gameObject.SetActive(isActive);
+            if (statusFeedbackText != null) statusFeedbackText.gameObject.SetActive(isActive);
+            if (subtitleText != null) subtitleText.gameObject.SetActive(isActive);
         }
     }
 }

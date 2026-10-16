@@ -1,6 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using DG.Tweening;
+using Solutio.Auth;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,7 +10,8 @@ namespace Solutio.UI
 {
     /// <summary>
     /// Контроллер формы регистрации новых пользователей.
-    /// Реализует комплексную валидацию логина, email, длины пароля и проверки совпадения паролей.
+    /// Реализует валидацию, предварительную проверку базы данных SQLite,
+    /// вызов SMTP-верификации и переключение на панель ввода кода.
     /// </summary>
     public sealed class RegistrationViewController : MonoBehaviour
     {
@@ -17,6 +19,9 @@ namespace Solutio.UI
         [SerializeField] private CanvasGroup rootCanvasGroup;
         [SerializeField] private RectTransform modalContainer;
         [SerializeField] private UIBlurEffect backgroundBlur;
+
+        [Header("Verification Panel Reference")]
+        [SerializeField] private VerificationPanelController verificationPanel;
 
         [Header("Input Fields")]
         [SerializeField] private TMP_InputField loginInputField;
@@ -44,37 +49,48 @@ namespace Solutio.UI
         [Header("Visual Theme Settings")]
         [SerializeField] private Color normalBorderColor = new Color(0.05f, 0.07f, 0.11f, 0.9f);
         [SerializeField] private Color errorBorderColor = new Color(0.95f, 0.15f, 0.25f, 0.95f);
-        [SerializeField] private Color successColor = new Color(0.2f, 0.95f, 0.5f, 1f);
+        [SerializeField] private Color successColor = new Color(0.19f, 0.44f, 0.51f, 1f);
         [SerializeField] private Color failureColor = new Color(0.95f, 0.25f, 0.25f, 1f);
 
-        // Регулярные выражения для строгой верификации
+        // Регулярные выражения
         private static readonly Regex LoginRegex = new Regex(@"^[a-zA-Z0-9_]{3,20}$", RegexOptions.Compiled);
-        private static readonly Regex EmailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
 
         private bool _isPasswordVisible;
         private Tween _statusFadeTween;
         private Tween _shakeTween;
 
-        /// <summary>
-        /// Событие отправки проверенных регистрационных данных (Login, Email, Password).
-        /// </summary>
         public event Action<string, string, string> OnRegistrationSubmitted;
-
-        /// <summary>
-        /// Событие перехода обратно к окну авторизации.
-        /// </summary>
         public event Action OnNavigateToLoginRequested;
+        public event Action<string> OnRegistrationCompleted;
 
         private void Awake()
         {
             ValidateSerializedFields();
             RegisterEventHandlers();
             ResetFormState();
+
             if (submitRegisterButton != null)
-                submitRegisterButton.GetComponentInChildren<TMP_Text>().text = "СОЗДАТЬ АККАУНТ";
+            {
+                TMP_Text btnText = submitRegisterButton.GetComponentInChildren<TMP_Text>();
+                if (btnText != null) btnText.text = "СОЗДАТЬ АККАУНТ";
+            }
 
             if (switchToLoginButton != null)
-                switchToLoginButton.GetComponentInChildren<TMP_Text>().text = "Уже есть аккаунт? Войти";
+            {
+                TMP_Text switchText = switchToLoginButton.GetComponentInChildren<TMP_Text>();
+                if (switchText != null) switchText.text = "Уже есть аккаунт? Войти";
+            }
+        }
+
+        private void Start()
+        {
+            // Подписываемся на системные события контроллера авторизации
+            if (AuthController.Instance != null)
+            {
+                AuthController.Instance.OnCodeSentSuccessfully += HandleCodeSentSuccessfully;
+                AuthController.Instance.OnCodeSendFailed += HandleCodeSendFailed;
+                AuthController.Instance.OnUserRegisteredSuccessfully += HandleUserRegisteredInDatabase;
+            }
         }
 
         private void OnDestroy()
@@ -82,6 +98,13 @@ namespace Solutio.UI
             UnregisterEventHandlers();
             _statusFadeTween?.Kill();
             _shakeTween?.Kill();
+
+            if (AuthController.Instance != null)
+            {
+                AuthController.Instance.OnCodeSentSuccessfully -= HandleCodeSentSuccessfully;
+                AuthController.Instance.OnCodeSendFailed -= HandleCodeSendFailed;
+                AuthController.Instance.OnUserRegisteredSuccessfully -= HandleUserRegisteredInDatabase;
+            }
         }
 
         private void RegisterEventHandlers()
@@ -111,6 +134,14 @@ namespace Solutio.UI
         public void ShowModal()
         {
             gameObject.SetActive(true);
+            SetFieldsActive(true);
+            SetInteractive(true);
+
+            if (verificationPanel != null)
+            {
+                verificationPanel.gameObject.SetActive(false);
+            }
+
             rootCanvasGroup.alpha = 0f;
             modalContainer.localScale = new Vector3(0.85f, 0.85f, 1f);
 
@@ -139,9 +170,22 @@ namespace Solutio.UI
         }
 
         /// <summary>
-        /// Центральная логика верификации данных регистрации.
+        /// Управляет видимостью полей формы для предотвращения визуального наложения на VerificationPanel.
         /// </summary>
-        private void HandleSubmit()
+        public void SetFieldsActive(bool isActive)
+        {
+            if (loginInputField != null) loginInputField.gameObject.SetActive(isActive);
+            if (emailInputField != null) emailInputField.gameObject.SetActive(isActive);
+            if (passwordInputField != null) passwordInputField.gameObject.SetActive(isActive);
+            if (confirmPasswordInputField != null) confirmPasswordInputField.gameObject.SetActive(isActive);
+            if (submitRegisterButton != null) submitRegisterButton.gameObject.SetActive(isActive);
+            if (switchToLoginButton != null) switchToLoginButton.gameObject.SetActive(isActive);
+        }
+
+        /// <summary>
+        /// Обработчик кнопки регистрации: валидация, проверка уникальности в SQLite и запуск процесса.
+        /// </summary>
+        private async void HandleSubmit()
         {
             string rawLogin = loginInputField.text?.Trim() ?? string.Empty;
             string rawEmail = emailInputField.text?.Trim() ?? string.Empty;
@@ -161,16 +205,10 @@ namespace Solutio.UI
                 return;
             }
 
-            // 2. Проверка Email
-            if (string.IsNullOrEmpty(rawEmail))
+            // 2. Проверка Email по RFC 5322
+            if (!EmailValidator.ValidateEmail(rawEmail, out string sanitizedEmail, out string emailError))
             {
-                ShowValidationError(emailFieldBorder, "Поле Email не может быть пустым!");
-                return;
-            }
-
-            if (!EmailRegex.IsMatch(rawEmail))
-            {
-                ShowValidationError(emailFieldBorder, "Некорректный формат адреса электронной почты!");
+                ShowValidationError(emailFieldBorder, emailError);
                 return;
             }
 
@@ -200,11 +238,65 @@ namespace Solutio.UI
                 return;
             }
 
-            // 5. Успешная валидация
-            DisplayStatus("Данные корректны. Создание профиля...", successColor);
-            SetInteractive(false);
+            // 5. Проверка базы данных на доступность учетных данных перед отправкой
+            if (AuthController.Instance != null)
+            {
+                if (!AuthController.Instance.ValidateCredentialsAvailability(rawLogin, sanitizedEmail, out string conflictError))
+                {
+                    if (conflictError.Contains("Email"))
+                    {
+                        ShowValidationError(emailFieldBorder, conflictError);
+                    }
+                    else
+                    {
+                        ShowValidationError(loginFieldBorder, conflictError);
+                    }
+                    return;
+                }
+            }
 
-            OnRegistrationSubmitted?.Invoke(rawLogin, rawEmail, rawPassword);
+            // 6. Запуск асинхронной регистрации
+            SetInteractive(false);
+            DisplayStatus("Проверка данных и создание печати...", successColor);
+
+            OnRegistrationSubmitted?.Invoke(rawLogin, sanitizedEmail, rawPassword);
+
+            if (AuthController.Instance != null)
+            {
+                await AuthController.Instance.StartRegistrationAsync(rawLogin, sanitizedEmail, rawPassword);
+            }
+            else
+            {
+                ShowValidationError(null, "Ошибка: AuthController не обнаружен на сцене!");
+                SetInteractive(true);
+            }
+        }
+
+        private void HandleCodeSentSuccessfully(string email)
+        {
+            DisplayStatus("Печать отправлена на почту!", successColor);
+
+            if (verificationPanel != null)
+            {
+                SetFieldsActive(false);
+                verificationPanel.ShowPanel(email);
+            }
+            else
+            {
+                Debug.LogWarning("[RegistrationViewController] Ссылка на VerificationPanel не назначена!");
+            }
+        }
+
+        private void HandleCodeSendFailed(string errorMessage)
+        {
+            SetInteractive(true);
+            ShowValidationError(emailFieldBorder, errorMessage);
+        }
+
+        private void HandleUserRegisteredInDatabase(int userId, string registeredLogin)
+        {
+            DisplayStatus($"Профиль {registeredLogin} успешно создан!", successColor);
+            OnRegistrationCompleted?.Invoke(registeredLogin);
         }
 
         private void ShowValidationError(Image fieldBorder, string errorMessage)
@@ -224,6 +316,7 @@ namespace Solutio.UI
             {
                 fieldBorder.color = normalBorderColor;
             }
+
             statusFeedbackText.text = string.Empty;
         }
 
@@ -233,7 +326,6 @@ namespace Solutio.UI
             statusFeedbackText.text = message;
             statusFeedbackText.color = color;
             statusFeedbackText.alpha = 0f;
-
             _statusFadeTween = statusFeedbackText.DOFade(1f, 0.2f).SetUpdate(true);
         }
 
@@ -276,7 +368,7 @@ namespace Solutio.UI
             togglePasswordButton.interactable = isInteractive;
         }
 
-        private void ResetFormState()
+        public void ResetFormState()
         {
             loginInputField.text = string.Empty;
             emailInputField.text = string.Empty;
@@ -299,6 +391,7 @@ namespace Solutio.UI
         {
             if (rootCanvasGroup == null) rootCanvasGroup = GetComponent<CanvasGroup>();
             if (modalContainer == null) modalContainer = GetComponent<RectTransform>();
+            if (verificationPanel == null) verificationPanel = GetComponentInChildren<VerificationPanelController>(true);
         }
     }
 }
