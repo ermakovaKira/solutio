@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Net;
 using System.Net.Mail;
 using System.Security.Cryptography;
@@ -17,6 +18,10 @@ namespace Solutio.Auth
     public sealed class AuthController : MonoBehaviour
     {
         public static AuthController Instance { get; private set; }
+
+        // Данные текущей активной сессии авторизованного игрока
+        public static int CurrentUserId { get; private set; } = -1;
+        public static string CurrentUserLogin { get; private set; } = string.Empty;
 
         [Header("SMTP Server Configuration")]
         [SerializeField] private string smtpHost = "smtp.mail.ru";
@@ -42,11 +47,12 @@ namespace Solutio.Auth
         private string _pendingPasswordHash = string.Empty;
         private bool _isRegistrationPending = false;
 
-        // События жизненного цикла (гарантированно вызываются в Main Thread)
+        // События жизненного цикла
         public event Action<string> OnCodeSentSuccessfully;
         public event Action<string> OnCodeSendFailed;
         public event Action<string> OnEmailVerified;
         public event Action<int, string> OnUserRegisteredSuccessfully;
+        public event Action<int, string> OnUserAuthenticated;
         public event Action<string> OnRegistrationDatabaseError;
 
         private void Awake()
@@ -62,6 +68,62 @@ namespace Solutio.Auth
 
             ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
         }
+
+        #region Authentication (Login Flow)
+
+        /// <summary>
+        /// Выполняет аутентификацию пользователя в базе данных через проверку хэша SHA-256.
+        /// </summary>
+        public bool TryAuthenticate(string login, string rawPassword, out int userId, out string errorMessage)
+        {
+            userId = -1;
+            errorMessage = string.Empty;
+
+            if (DatabaseManager.Instance == null)
+            {
+                errorMessage = "Сервис базы данных недоступен!";
+                return false;
+            }
+
+            try
+            {
+                const string query = "SELECT id_user, password_hash FROM users WHERE LOWER(login) = LOWER(@login);";
+                DataTable dt = DatabaseManager.Instance.ExecuteQuery(query, new SqliteParameter("@login", login.Trim()));
+
+                if (dt == null || dt.Rows.Count == 0)
+                {
+                    errorMessage = "Пользователь не найден!";
+                    return false;
+                }
+
+                string storedHash = dt.Rows[0]["password_hash"].ToString();
+                int foundId = Convert.ToInt32(dt.Rows[0]["id_user"]);
+
+                // Криптографическая сверка SHA-256 хэша
+                if (!PasswordSecurity.VerifyPassword(rawPassword, storedHash))
+                {
+                    errorMessage = "Неверный пароль!";
+                    return false;
+                }
+
+                // Фиксация сессии
+                userId = foundId;
+                CurrentUserId = foundId;
+                CurrentUserLogin = login.Trim();
+
+                Debug.Log($"<color=#00FF66><b>[AUTH SUCCESS]</b> Герой <b>{CurrentUserLogin}</b> (ID: {CurrentUserId}) успешно вошел в мир Solutio!</color>");
+                OnUserAuthenticated?.Invoke(CurrentUserId, CurrentUserLogin);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[AuthController] Ошибка авторизации: {ex.Message}");
+                errorMessage = "Ошибка обращения к базе данных.";
+                return false;
+            }
+        }
+
+        #endregion
 
         #region Security & Code Generation
 
@@ -100,7 +162,6 @@ namespace Solutio.Auth
 
             try
             {
-                // Проверка логина
                 string checkLoginQuery = "SELECT COUNT(*) FROM users WHERE LOWER(login) = LOWER(@login);";
                 object loginCount = DatabaseManager.Instance.ExecuteScalar(
                     checkLoginQuery,
@@ -109,11 +170,10 @@ namespace Solutio.Auth
 
                 if (loginCount != null && Convert.ToInt32(loginCount) > 0)
                 {
-                    conflictError = "Герой с таким именем уже существует!";
+                    conflictError = "Имя уже занято!";
                     return false;
                 }
 
-                // Проверка email
                 string checkEmailQuery = "SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(@email);";
                 object emailCount = DatabaseManager.Instance.ExecuteScalar(
                     checkEmailQuery,
@@ -122,7 +182,7 @@ namespace Solutio.Auth
 
                 if (emailCount != null && Convert.ToInt32(emailCount) > 0)
                 {
-                    conflictError = "Этот Email уже привязан к другому аккаунту!";
+                    conflictError = "Этот Email уже используется!";
                     return false;
                 }
 
@@ -140,10 +200,6 @@ namespace Solutio.Auth
 
         #region Registration & Verification Flow
 
-        /// <summary>
-        /// Инициирует регистрацию: проверяет БД на уникальность, хэширует пароль по SHA-256
-        /// и асинхронно отправляет код подтверждения на почту.
-        /// </summary>
         public async Task<bool> StartRegistrationAsync(string login, string email, string rawPassword)
         {
             if (_isCurrentlySending)
@@ -152,34 +208,26 @@ namespace Solutio.Auth
                 return false;
             }
 
-            // 1. Проверка адреса по стандарту RFC 5322
             if (!EmailValidator.ValidateEmail(email, out string sanitizedEmail, out string validationError))
             {
                 OnCodeSendFailed?.Invoke(validationError);
                 return false;
             }
 
-            // 2. Проверка уникальности логина и email в таблице users
             if (!ValidateCredentialsAvailability(login, sanitizedEmail, out string conflictError))
             {
                 OnCodeSendFailed?.Invoke(conflictError);
                 return false;
             }
 
-            // 3. Криптографическое хэширование пароля (в памяти сохраняется только хэш SHA-256)
             _pendingLogin = login.Trim();
             _pendingEmail = sanitizedEmail;
             _pendingPasswordHash = PasswordSecurity.HashPassword(rawPassword);
             _isRegistrationPending = true;
 
-            // 4. Запуск отправки письма
             return await SendVerificationCodeAsync(sanitizedEmail, isPasswordReset: false);
         }
 
-        /// <summary>
-        /// Потокобезопасная отправка письма с кодом подтверждения по протоколу SMTP.
-        /// Сетевая часть выполняется в фоне, а все события и логи возвращаются в Главный Поток Unity.
-        /// </summary>
         public async Task<bool> SendVerificationCodeAsync(string targetEmail, bool isPasswordReset = false)
         {
             if (_isCurrentlySending)
@@ -212,7 +260,6 @@ namespace Solutio.Auth
                 return true;
             }
 
-            // Подготавливаем локальные строковые копии данных для безопасного пула потоков
             string cleanHost = smtpHost.Trim();
             int port = smtpPort;
             bool ssl = enableSsl;
@@ -228,7 +275,6 @@ namespace Solutio.Auth
             bool sendSuccess = false;
             string failureReason = string.Empty;
 
-            // ЧИСТАЯ СЕТЕВАЯ ПЕРЕДАЧА В ФОНЕ (без единого вызова API Unity)
             await Task.Run(() =>
             {
                 try
@@ -266,7 +312,6 @@ namespace Solutio.Auth
                 }
             });
 
-            // МЫ СНОВА В ГЛАВНОМ ПОТОКЕ UNITY (Main Thread)
             _isCurrentlySending = false;
 
             if (sendSuccess)
@@ -283,10 +328,6 @@ namespace Solutio.Auth
             }
         }
 
-        /// <summary>
-        /// Проверяет введенный пользователем код. Если код верный и активна регистрация —
-        /// автоматически записывает пользователя в базу данных SQLite с хэшем SHA-256.
-        /// </summary>
         public bool VerifyCode(string enteredCode, out string errorMessage)
         {
             errorMessage = string.Empty;
@@ -315,7 +356,6 @@ namespace Solutio.Auth
             OnEmailVerified?.Invoke(_activeTargetEmail);
             _activeGeneratedCode = string.Empty;
 
-            // Если подтверждалась регистрация нового пользователя — вносим запись в БД
             if (_isRegistrationPending)
             {
                 return CommitRegistrationToDatabase(out errorMessage);
@@ -324,9 +364,6 @@ namespace Solutio.Auth
             return true;
         }
 
-        /// <summary>
-        /// Вносит верифицированного пользователя в таблицу users базы SQLite через параметризированную команду.
-        /// </summary>
         private bool CommitRegistrationToDatabase(out string errorMessage)
         {
             errorMessage = string.Empty;
@@ -353,7 +390,6 @@ namespace Solutio.Auth
 
             if (rowsAffected > 0)
             {
-                // Считываем присвоенный автоинкрементный id_user
                 object lastIdObj = DatabaseManager.Instance.ExecuteScalar("SELECT last_insert_rowid();");
                 int newUserId = (lastIdObj != null) ? Convert.ToInt32(lastIdObj) : -1;
 
@@ -363,7 +399,6 @@ namespace Solutio.Auth
 
                 string registeredLogin = _pendingLogin;
 
-                // Очищаем буфер чувствительных данных
                 _pendingLogin = string.Empty;
                 _pendingEmail = string.Empty;
                 _pendingPasswordHash = string.Empty;

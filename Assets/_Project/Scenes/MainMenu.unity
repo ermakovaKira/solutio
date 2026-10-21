@@ -703,9 +703,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3451659950576622760, guid: 0bc7d08b7363a474db772fd7b25e2b4a, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 45
+      objectReference: {fileID: 0}
+    - target: {fileID: 3451659950576622760, guid: 0bc7d08b7363a474db772fd7b25e2b4a, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -96
+      objectReference: {fileID: 0}
     - target: {fileID: 4801385072740125038, guid: 0bc7d08b7363a474db772fd7b25e2b4a, type: 3}
       propertyPath: m_Name
       value: AuthCanvas
+      objectReference: {fileID: 0}
+    - target: {fileID: 5916866040081441142, guid: 0bc7d08b7363a474db772fd7b25e2b4a, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -125
       objectReference: {fileID: 0}
     - target: {fileID: 7259497771164559587, guid: 0bc7d08b7363a474db772fd7b25e2b4a, type: 3}
       propertyPath: m_Placeholder

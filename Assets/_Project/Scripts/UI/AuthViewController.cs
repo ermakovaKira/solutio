@@ -1,6 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 using DG.Tweening;
+using Solutio.Auth;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,7 +9,8 @@ using UnityEngine.UI;
 namespace Solutio.UI
 {
     /// <summary>
-    /// Контроллер формы экранной авторизации с комплексной валидацией и Dark Fantasy микро-анимациями.
+    /// Контроллер формы экранной авторизации с комплексной валидацией,
+    /// криптографической проверкой хэша пароля в базе данных и Dark Fantasy микро-анимациями.
     /// </summary>
     public sealed class AuthViewController : MonoBehaviour
     {
@@ -16,6 +18,7 @@ namespace Solutio.UI
         [SerializeField] private CanvasGroup rootCanvasGroup;
         [SerializeField] private RectTransform modalContainer;
         [SerializeField] private UIBlurEffect backgroundBlur;
+        [SerializeField] private TextMeshProUGUI subtitleText;
 
         [Header("Input Fields")]
         [SerializeField] private TMP_InputField loginInputField;
@@ -28,7 +31,6 @@ namespace Solutio.UI
         [SerializeField] private Button switchToRegisterButton;
         [SerializeField] private Button togglePasswordButton;
         [SerializeField] private Image togglePasswordIcon;
-        [SerializeField] private Button forgotPasswordButton;
 
         [Header("Feedback Elements")]
         [SerializeField] private TextMeshProUGUI statusFeedbackText;
@@ -38,11 +40,10 @@ namespace Solutio.UI
         [Header("Visual Theme Settings")]
         [SerializeField] private Color normalBorderColor = new Color(0.2f, 0.6f, 0.8f, 0.4f);
         [SerializeField] private Color errorBorderColor = new Color(0.95f, 0.15f, 0.25f, 0.9f);
-        [SerializeField] private Color successColor = new Color(0.2f, 0.95f, 0.5f, 1f);
+        [SerializeField] private Color successColor = new Color(0.19f, 0.44f, 0.51f, 1f);
         [SerializeField] private Color failureColor = new Color(0.95f, 0.25f, 0.25f, 1f);
-        [SerializeField] private TMP_Text subtitleText;
 
-        // Логин: 3-20 латинских букв, цифр или подчеркиваний
+        // Регулярное выражение: логин от 3 до 20 символов (только латиница, цифры и _)
         private static readonly Regex LoginRegex = new Regex(@"^[a-zA-Z0-9_]{3,20}$", RegexOptions.Compiled);
 
         private bool _isPasswordVisible;
@@ -51,7 +52,6 @@ namespace Solutio.UI
 
         public event Action<string, string> OnLoginSubmitted;
         public event Action OnNavigateToRegisterRequested;
-        public event Action OnForgotPasswordRequested;
 
         private void Awake()
         {
@@ -80,9 +80,6 @@ namespace Solutio.UI
 
             loginInputField.onValueChanged.AddListener(_ => ClearFieldStatus(loginFieldBorder));
             passwordInputField.onValueChanged.AddListener(_ => ClearFieldStatus(passwordFieldBorder));
-
-            if (forgotPasswordButton != null)
-                forgotPasswordButton.onClick.AddListener(() => OnForgotPasswordRequested?.Invoke());
         }
 
         private void UnregisterEventHandlers()
@@ -90,30 +87,17 @@ namespace Solutio.UI
             submitLoginButton.onClick.RemoveAllListeners();
             switchToRegisterButton.onClick.RemoveAllListeners();
             togglePasswordButton.onClick.RemoveAllListeners();
+
             loginInputField.onValueChanged.RemoveAllListeners();
             passwordInputField.onValueChanged.RemoveAllListeners();
-            if (forgotPasswordButton != null)
-                forgotPasswordButton.onClick.RemoveAllListeners();
-        }
-
-        /// <summary>
-        /// Автоматически подставляет логин в поле ввода и переводит фокус на пароль.
-        /// </summary>
-        public void SetLogin(string login)
-        {
-            if (loginInputField != null)
-            {
-                loginInputField.text = login;
-                if (passwordInputField != null)
-                {
-                    passwordInputField.ActivateInputField();
-                }
-            }
         }
 
         public void ShowModal()
         {
             gameObject.SetActive(true);
+            SetFieldsActive(true);
+            SetInteractive(true);
+
             rootCanvasGroup.alpha = 0f;
             modalContainer.localScale = new Vector3(0.85f, 0.85f, 1f);
 
@@ -141,6 +125,37 @@ namespace Solutio.UI
             });
         }
 
+        /// <summary>
+        /// Управляет видимостью полей формы (для бесконфликтного открытия ResetPasswordPanel).
+        /// </summary>
+        public void SetFieldsActive(bool isActive)
+        {
+            if (loginInputField != null) loginInputField.gameObject.SetActive(isActive);
+            if (passwordInputField != null) passwordInputField.gameObject.SetActive(isActive);
+            if (submitLoginButton != null) submitLoginButton.gameObject.SetActive(isActive);
+            if (switchToRegisterButton != null) switchToRegisterButton.gameObject.SetActive(isActive);
+            if (togglePasswordButton != null) togglePasswordButton.gameObject.SetActive(isActive);
+            if (subtitleText != null) subtitleText.gameObject.SetActive(isActive);
+        }
+
+        /// <summary>
+        /// Автоматически подставляет логин в поле ввода и переводит фокус на пароль.
+        /// </summary>
+        public void SetLogin(string login)
+        {
+            if (loginInputField != null)
+            {
+                loginInputField.text = login;
+                if (passwordInputField != null)
+                {
+                    passwordInputField.ActivateInputField();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Обработчик кнопки входа: клиентская валидация и сверка хэша SHA-256 в базе SQLite.
+        /// </summary>
         private void HandleSubmit()
         {
             string rawLogin = loginInputField.text?.Trim() ?? string.Empty;
@@ -170,8 +185,27 @@ namespace Solutio.UI
                 return;
             }
 
-            DisplayStatus("Проверка данных...", successColor);
-            OnLoginSubmitted?.Invoke(rawLogin, rawPassword);
+            DisplayStatus("Проверка печати доступа...", successColor);
+
+            // Боевая проверка учетных данных в SQLite через AuthController
+            if (AuthController.Instance != null)
+            {
+                if (AuthController.Instance.TryAuthenticate(rawLogin, rawPassword, out int userId, out string authError))
+                {
+                    DisplayStatus($"Добро пожаловать, {rawLogin}!", successColor);
+                    SetInteractive(false);
+                    OnLoginSubmitted?.Invoke(rawLogin, rawPassword);
+                }
+                else
+                {
+                    Image targetBorder = authError.Contains("найден") ? loginFieldBorder : passwordFieldBorder;
+                    ShowValidationError(targetBorder, authError);
+                }
+            }
+            else
+            {
+                ShowValidationError(null, "Ошибка: AuthController не обнаружен на сцене!");
+            }
         }
 
         private void ShowValidationError(Image fieldBorder, string errorMessage)
@@ -191,6 +225,7 @@ namespace Solutio.UI
             {
                 fieldBorder.color = normalBorderColor;
             }
+
             statusFeedbackText.text = string.Empty;
         }
 
@@ -200,7 +235,6 @@ namespace Solutio.UI
             statusFeedbackText.text = message;
             statusFeedbackText.color = color;
             statusFeedbackText.alpha = 0f;
-
             _statusFadeTween = statusFeedbackText.DOFade(1f, 0.2f).SetUpdate(true);
         }
 
@@ -215,6 +249,7 @@ namespace Solutio.UI
         private void TogglePasswordVisibility()
         {
             _isPasswordVisible = !_isPasswordVisible;
+
             passwordInputField.contentType = _isPasswordVisible
                 ? TMP_InputField.ContentType.Standard
                 : TMP_InputField.ContentType.Password;
@@ -234,8 +269,6 @@ namespace Solutio.UI
             submitLoginButton.interactable = isInteractive;
             switchToRegisterButton.interactable = isInteractive;
             togglePasswordButton.interactable = isInteractive;
-            if (forgotPasswordButton != null)
-                forgotPasswordButton.interactable = isInteractive;
         }
 
         private void ResetFormState()
@@ -254,20 +287,6 @@ namespace Solutio.UI
         {
             if (rootCanvasGroup == null) rootCanvasGroup = GetComponent<CanvasGroup>();
             if (modalContainer == null) modalContainer = GetComponent<RectTransform>();
-        }
-    
-    /// <summary>
-        /// Включает или выключает поля авторизации при переходе в режим сброса пароля.
-        /// </summary>
-        public void SetFieldsActive(bool isActive)
-        {
-            if (loginInputField != null) loginInputField.gameObject.SetActive(isActive);
-            if (passwordInputField != null) passwordInputField.gameObject.SetActive(isActive);
-            if (submitLoginButton != null) submitLoginButton.gameObject.SetActive(isActive);
-            if (switchToRegisterButton != null) switchToRegisterButton.gameObject.SetActive(isActive);
-            if (forgotPasswordButton != null) forgotPasswordButton.gameObject.SetActive(isActive);
-            if (statusFeedbackText != null) statusFeedbackText.gameObject.SetActive(isActive);
-            if (subtitleText != null) subtitleText.gameObject.SetActive(isActive);
         }
     }
 }
