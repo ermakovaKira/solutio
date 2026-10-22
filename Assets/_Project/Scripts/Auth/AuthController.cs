@@ -111,7 +111,7 @@ namespace Solutio.Auth
                 CurrentUserId = foundId;
                 CurrentUserLogin = login.Trim();
 
-                Debug.Log($"<color=#00FF66><b>[AUTH SUCCESS]</b> Герой <b>{CurrentUserLogin}</b> (ID: {CurrentUserId}) успешно вошел в мир Solutio!</color>");
+                Debug.Log($"<color=#00FF66><b>[AUTH SUCCESS]</b> Пользователь <b>{CurrentUserLogin}</b> (ID: {CurrentUserId}) успешно вошел в мир Solutio!</color>");
                 OnUserAuthenticated?.Invoke(CurrentUserId, CurrentUserLogin);
                 return true;
             }
@@ -122,7 +122,19 @@ namespace Solutio.Auth
                 return false;
             }
         }
+        /// <summary>
+        /// Завершает сессию активного пользователя.
+        /// </summary>
+        public void SignOut()
+        {
+            if (CurrentUserId > 0)
+            {
+                Debug.Log($"<color=#307082><b>[AUTH]</b></color> Пользователь <b>{CurrentUserLogin}</b> (ID: {CurrentUserId}) завершил сессию.");
+            }
 
+            CurrentUserId = -1;
+            CurrentUserLogin = string.Empty;
+        }
         #endregion
 
         #region Security & Code Generation

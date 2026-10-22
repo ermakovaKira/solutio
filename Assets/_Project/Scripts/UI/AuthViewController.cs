@@ -152,7 +152,26 @@ namespace Solutio.UI
                 }
             }
         }
+        /// <summary>
+        /// Полная очистка формы после выхода пользователя: пароль не должен оставаться в поле ввода.
+        /// Логин подставляется обратно для удобства повторного входа.
+        /// </summary>
+        public void ResetForNewSession(string lastLogin)
+        {
+            ResetFormState();
 
+            if (togglePasswordIcon != null && passwordHiddenSprite != null)
+            {
+                togglePasswordIcon.sprite = passwordHiddenSprite;
+            }
+
+            passwordInputField.ForceLabelUpdate();
+
+            if (!string.IsNullOrEmpty(lastLogin))
+            {
+                SetLogin(lastLogin);
+            }
+        }
         /// <summary>
         /// Обработчик кнопки входа: клиентская валидация и сверка хэша SHA-256 в базе SQLite.
         /// </summary>
