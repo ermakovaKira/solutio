@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using Solutio.Auth;
@@ -26,8 +26,9 @@ namespace Solutio.Draft
     /// Отвечает только за отображение: сетка героев по ролям, слоты пиков и банов обеих сторон,
     /// шкалы таймера ходов, панель выбранного героя, заголовок фазы и хода.
     /// Показ и скрытие через CanvasGroup и DOTween с SetUpdate(true), без SetActive.
-    /// Логика ходов и таймер на временных метках — День 11, автопик из SQLite и решения ИИ — День 12.
-    /// Режим предпросмотра вёрстки позволяет пройти драфт вручную для проверки визуальных состояний.
+    /// Логика ходов, таймер на временных метках и очерёдность сторон — в DraftController (День 11):
+    /// представление сообщает об открытии и закрытии экрана и о подтверждении выбора пользователем,
+    /// а контроллер переключает ходы через SetStep, SetTimer и ApplyAction.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CanvasGroup))]
@@ -75,15 +76,17 @@ namespace Solutio.Draft
         [SerializeField] private Sprite placeholderPortrait;
         [SerializeField] private HeroPortraitEntry[] portraits = Array.Empty<HeroPortraitEntry>();
 
-        [Header("Layout Preview (проверка вёрстки)")]
-        [SerializeField] private bool enableLayoutPreview = true;
-        [SerializeField, Range(0.2f, 5f)] private float previewAiThinkSeconds = 1.2f;
-
         [Header("Debug")]
         [SerializeField] private bool enableDetailedLogging = true;
 
-        /// <summary>Пользователь подтвердил бан или пик героя (ID героя). Обрабатывается контроллером драфта (День 11).</summary>
+        /// <summary>Пользователь подтвердил бан или пик героя (ID героя). Обрабатывается DraftController.</summary>
         public event Action<int> OnActionConfirmed;
+
+        /// <summary>Экран драфта открыт и подготовлен для конфигурации матча — контроллер начинает первый ход.</summary>
+        public event Action<MatchSessionConfig> OnDraftShown;
+
+        /// <summary>Экран драфта закрывается (выход в меню) — контроллер останавливает часы.</summary>
+        public event Action OnDraftHidden;
 
         /// <summary>true, если экран драфта показан.</summary>
         public bool IsVisible { get; private set; }
@@ -97,17 +100,20 @@ namespace Solutio.Draft
         /// <summary>Пул героев, загруженный из таблицы heroes.</summary>
         public IReadOnlyList<HeroRecord> HeroPool => _heroPool;
 
+        /// <summary>Основное время хода из Инспектора, секунды.</summary>
+        public float TurnDurationSeconds => turnDurationSeconds;
+
+        /// <summary>Запас времени стороны на весь драфт из Инспектора, секунды.</summary>
+        public float ReserveDurationSeconds => reserveDurationSeconds;
+
         private readonly Dictionary<int, DraftHeroCard> _cardsByHeroId = new Dictionary<int, DraftHeroCard>(32);
         private readonly Dictionary<int, Sprite> _portraitsByHeroId = new Dictionary<int, Sprite>(32);
         private readonly List<DraftHeroCard> _allCards = new List<DraftHeroCard>(32);
-        private readonly List<DraftHeroCard> _availableBuffer = new List<DraftHeroCard>(32);
 
         private IReadOnlyList<HeroRecord> _heroPool = Array.Empty<HeroRecord>();
         private DraftHeroCard _selectedCard;
-        private System.Random _previewRandom;
         private Tween _fadeTween;
         private Tween _turnPunchTween;
-        private Tween _previewAiTween;
         private bool _isSubscribed;
         private bool _isValid;
 
@@ -165,14 +171,12 @@ namespace Solutio.Draft
             }
 
             _isSubscribed = false;
-            StopPreview();
         }
 
         private void OnDestroy()
         {
             _fadeTween?.Kill();
             _turnPunchTween?.Kill();
-            StopPreview();
 
             for (int i = 0; i < _allCards.Count; i++)
             {
@@ -208,7 +212,6 @@ namespace Solutio.Draft
             }
 
             Session = config ?? throw new ArgumentNullException(nameof(config));
-            _previewRandom = config.CreateMatchRandom();
 
             LoadHeroPool();
             BindCards();
@@ -233,10 +236,7 @@ namespace Solutio.Draft
                 Debug.Log($"<color=#307082>[DraftView]</color> Экран драфта открыт: {config.UserLogin}, героев в пуле: {_heroPool.Count}, ходов: {DraftSequence.TotalSteps}.");
             }
 
-            if (enableLayoutPreview)
-            {
-                StartPreviewStep();
-            }
+            OnDraftShown?.Invoke(config);
         }
 
         /// <summary>
@@ -244,7 +244,7 @@ namespace Solutio.Draft
         /// </summary>
         public void Hide(Action onComplete = null)
         {
-            StopPreview();
+            bool wasVisible = IsVisible;
             ClearSelection();
 
             IsVisible = false;
@@ -257,11 +257,16 @@ namespace Solutio.Draft
                 .SetEase(Ease.InQuad)
                 .Owned(gameObject)
                 .OnComplete(() => onComplete?.Invoke());
+
+            if (wasVisible)
+            {
+                OnDraftHidden?.Invoke();
+            }
         }
 
         #endregion
 
-        #region View API (День 11)
+        #region View API (DraftController)
 
         /// <summary>
         /// Переключает экран на указанный ход: заголовок фазы, чья очередь, активные шкала и слот.
@@ -307,8 +312,6 @@ namespace Solutio.Draft
 
             userTimer.SetActive(isUserTurn);
             aiTimer.SetActive(!isUserTurn);
-            userTimer.ResetBar(turnDurationSeconds, 1f, reserveDurationSeconds);
-            aiTimer.ResetBar(turnDurationSeconds, 1f, reserveDurationSeconds);
 
             GetSlots(step.Side, step.Action)[step.SlotIndex].SetActive(true);
 
@@ -436,13 +439,7 @@ namespace Solutio.Draft
                 return;
             }
 
-            int heroId = _selectedCard.Hero.Id;
-            OnActionConfirmed?.Invoke(heroId);
-
-            if (enableLayoutPreview)
-            {
-                CompletePreviewStep(heroId);
-            }
+            OnActionConfirmed?.Invoke(_selectedCard.Hero.Id);
         }
 
         private void HandleLeaveClicked()
@@ -458,78 +455,6 @@ namespace Solutio.Draft
             }
 
             Hide();
-        }
-
-        #endregion
-
-        #region Layout Preview
-
-        private void StartPreviewStep()
-        {
-            StopPreview();
-
-            if (!IsVisible || CurrentStepIndex >= DraftSequence.TotalSteps)
-            {
-                return;
-            }
-
-            DraftStep step = DraftSequence.GetStep(CurrentStepIndex);
-            GetTimer(step.Side).PlayPreview(turnDurationSeconds, 1f, reserveDurationSeconds);
-
-            if (step.Side == DraftSide.Ai)
-            {
-                _previewAiTween = DOVirtual
-                    .DelayedCall(previewAiThinkSeconds, PreviewAiAction, true)
-                    .Owned(gameObject);
-            }
-        }
-
-        private void PreviewAiAction()
-        {
-            _availableBuffer.Clear();
-
-            for (int i = 0; i < _allCards.Count; i++)
-            {
-                if (_allCards[i].IsAvailable)
-                {
-                    _availableBuffer.Add(_allCards[i]);
-                }
-            }
-
-            if (_availableBuffer.Count == 0)
-            {
-                return;
-            }
-
-            DraftHeroCard choice = _availableBuffer[_previewRandom.Next(0, _availableBuffer.Count)];
-            CompletePreviewStep(choice.Hero.Id);
-        }
-
-        private void CompletePreviewStep(int heroId)
-        {
-            if (!ApplyAction(CurrentStepIndex, heroId))
-            {
-                return;
-            }
-
-            SetStep(CurrentStepIndex + 1);
-            StartPreviewStep();
-        }
-
-        private void StopPreview()
-        {
-            _previewAiTween?.Kill();
-            _previewAiTween = null;
-
-            if (userTimer != null)
-            {
-                userTimer.StopPreview();
-            }
-
-            if (aiTimer != null)
-            {
-                aiTimer.StopPreview();
-            }
         }
 
         #endregion
@@ -627,6 +552,9 @@ namespace Solutio.Draft
             {
                 aiBanSlots[i].SetEmpty();
             }
+
+            userTimer.ResetBar(turnDurationSeconds, 1f, reserveDurationSeconds);
+            aiTimer.ResetBar(turnDurationSeconds, 1f, reserveDurationSeconds);
         }
 
         private Sprite GetPortrait(HeroRecord hero, out Color tint)
