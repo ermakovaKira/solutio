@@ -1,4 +1,4 @@
-using System;
+п»їusing System;
 using System.Text.RegularExpressions;
 using DG.Tweening;
 using Solutio.Auth;
@@ -9,9 +9,9 @@ using UnityEngine.UI;
 namespace Solutio.UI
 {
     /// <summary>
-    /// Контроллер формы регистрации новых пользователей.
-    /// Реализует валидацию, предварительную проверку базы данных SQLite,
-    /// вызов SMTP-верификации и переключение на панель ввода кода.
+    /// РљРѕРЅС‚СЂРѕР»Р»РµСЂ С„РѕСЂРјС‹ СЂРµРіРёСЃС‚СЂР°С†РёРё РЅРѕРІС‹С… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№.
+    /// Р РµР°Р»РёР·СѓРµС‚ РІР°Р»РёРґР°С†РёСЋ, РїСЂРµРґРІР°СЂРёС‚РµР»СЊРЅСѓСЋ РїСЂРѕРІРµСЂРєСѓ Р±Р°Р·С‹ РґР°РЅРЅС‹С… SQLite,
+    /// РІС‹Р·РѕРІ SMTP-РІРµСЂРёС„РёРєР°С†РёРё Рё РїРµСЂРµРєР»СЋС‡РµРЅРёРµ РЅР° РїР°РЅРµР»СЊ РІРІРѕРґР° РєРѕРґР°.
     /// </summary>
     public sealed class RegistrationViewController : MonoBehaviour
     {
@@ -52,7 +52,7 @@ namespace Solutio.UI
         [SerializeField] private Color successColor = new Color(0.19f, 0.44f, 0.51f, 1f);
         [SerializeField] private Color failureColor = new Color(0.95f, 0.25f, 0.25f, 1f);
 
-        // Регулярные выражения
+        // Р РµРіСѓР»СЏСЂРЅС‹Рµ РІС‹СЂР°Р¶РµРЅРёСЏ
         private static readonly Regex LoginRegex = new Regex(@"^[a-zA-Z0-9_]{3,20}$", RegexOptions.Compiled);
 
         private bool _isPasswordVisible;
@@ -72,19 +72,19 @@ namespace Solutio.UI
             if (submitRegisterButton != null)
             {
                 TMP_Text btnText = submitRegisterButton.GetComponentInChildren<TMP_Text>();
-                if (btnText != null) btnText.text = "СОЗДАТЬ АККАУНТ";
+                if (btnText != null) btnText.text = "РЎРћР—Р”РђРўР¬ РђРљРљРђРЈРќРў";
             }
 
             if (switchToLoginButton != null)
             {
                 TMP_Text switchText = switchToLoginButton.GetComponentInChildren<TMP_Text>();
-                if (switchText != null) switchText.text = "Уже есть аккаунт? Войти";
+                if (switchText != null) switchText.text = "РЈР¶Рµ РµСЃС‚СЊ Р°РєРєР°СѓРЅС‚? Р’РѕР№С‚Рё";
             }
         }
 
         private void Start()
         {
-            // Подписываемся на системные события контроллера авторизации
+            // РџРѕРґРїРёСЃС‹РІР°РµРјСЃСЏ РЅР° СЃРёСЃС‚РµРјРЅС‹Рµ СЃРѕР±С‹С‚РёСЏ РєРѕРЅС‚СЂРѕР»Р»РµСЂР° Р°РІС‚РѕСЂРёР·Р°С†РёРё
             if (AuthController.Instance != null)
             {
                 AuthController.Instance.OnCodeSentSuccessfully += HandleCodeSentSuccessfully;
@@ -170,7 +170,7 @@ namespace Solutio.UI
         }
 
         /// <summary>
-        /// Управляет видимостью полей формы для предотвращения визуального наложения на VerificationPanel.
+        /// РЈРїСЂР°РІР»СЏРµС‚ РІРёРґРёРјРѕСЃС‚СЊСЋ РїРѕР»РµР№ С„РѕСЂРјС‹ РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ РІРёР·СѓР°Р»СЊРЅРѕРіРѕ РЅР°Р»РѕР¶РµРЅРёСЏ РЅР° VerificationPanel.
         /// </summary>
         public void SetFieldsActive(bool isActive)
         {
@@ -183,7 +183,7 @@ namespace Solutio.UI
         }
 
         /// <summary>
-        /// Обработчик кнопки регистрации: валидация, проверка уникальности в SQLite и запуск процесса.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє РєРЅРѕРїРєРё СЂРµРіРёСЃС‚СЂР°С†РёРё: РІР°Р»РёРґР°С†РёСЏ, РїСЂРѕРІРµСЂРєР° СѓРЅРёРєР°Р»СЊРЅРѕСЃС‚Рё РІ SQLite Рё Р·Р°РїСѓСЃРє РїСЂРѕС†РµСЃСЃР°.
         /// </summary>
         private async void HandleSubmit()
         {
@@ -192,53 +192,53 @@ namespace Solutio.UI
             string rawPassword = passwordInputField.text ?? string.Empty;
             string rawConfirmPassword = confirmPasswordInputField.text ?? string.Empty;
 
-            // 1. Проверка логина
+            // 1. РџСЂРѕРІРµСЂРєР° Р»РѕРіРёРЅР°
             if (string.IsNullOrEmpty(rawLogin))
             {
-                ShowValidationError(loginFieldBorder, "Поле логина не может быть пустым!");
+                ShowValidationError(loginFieldBorder, "РџРѕР»Рµ Р»РѕРіРёРЅР° РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј!");
                 return;
             }
 
             if (!LoginRegex.IsMatch(rawLogin))
             {
-                ShowValidationError(loginFieldBorder, "Логин: 3-20 символов (только латиница, цифры и _).");
+                ShowValidationError(loginFieldBorder, "Р›РѕРіРёРЅ: 3-20 СЃРёРјРІРѕР»РѕРІ (С‚РѕР»СЊРєРѕ Р»Р°С‚РёРЅРёС†Р°, С†РёС„СЂС‹ Рё _).");
                 return;
             }
 
-            // 2. Проверка Email по RFC 5322
+            // 2. РџСЂРѕРІРµСЂРєР° Email РїРѕ RFC 5322
             if (!EmailValidator.ValidateEmail(rawEmail, out string sanitizedEmail, out string emailError))
             {
                 ShowValidationError(emailFieldBorder, emailError);
                 return;
             }
 
-            // 3. Проверка пароля
+            // 3. РџСЂРѕРІРµСЂРєР° РїР°СЂРѕР»СЏ
             if (string.IsNullOrEmpty(rawPassword))
             {
-                ShowValidationError(passwordFieldBorder, "Введите пароль!");
+                ShowValidationError(passwordFieldBorder, "Р’РІРµРґРёС‚Рµ РїР°СЂРѕР»СЊ!");
                 return;
             }
 
             if (rawPassword.Length < 6)
             {
-                ShowValidationError(passwordFieldBorder, "Пароль должен содержать не менее 6 символов!");
+                ShowValidationError(passwordFieldBorder, "РџР°СЂРѕР»СЊ РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РЅРµ РјРµРЅРµРµ 6 СЃРёРјРІРѕР»РѕРІ!");
                 return;
             }
 
-            // 4. Проверка совпадения паролей
+            // 4. РџСЂРѕРІРµСЂРєР° СЃРѕРІРїР°РґРµРЅРёСЏ РїР°СЂРѕР»РµР№
             if (string.IsNullOrEmpty(rawConfirmPassword))
             {
-                ShowValidationError(confirmPasswordFieldBorder, "Подтвердите введенный пароль!");
+                ShowValidationError(confirmPasswordFieldBorder, "РџРѕРґС‚РІРµСЂРґРёС‚Рµ РІРІРµРґРµРЅРЅС‹Р№ РїР°СЂРѕР»СЊ!");
                 return;
             }
 
             if (!string.Equals(rawPassword, rawConfirmPassword, StringComparison.Ordinal))
             {
-                ShowValidationError(confirmPasswordFieldBorder, "Введенные пароли не совпадают!");
+                ShowValidationError(confirmPasswordFieldBorder, "Р’РІРµРґРµРЅРЅС‹Рµ РїР°СЂРѕР»Рё РЅРµ СЃРѕРІРїР°РґР°СЋС‚!");
                 return;
             }
 
-            // 5. Проверка базы данных на доступность учетных данных перед отправкой
+            // 5. РџСЂРѕРІРµСЂРєР° Р±Р°Р·С‹ РґР°РЅРЅС‹С… РЅР° РґРѕСЃС‚СѓРїРЅРѕСЃС‚СЊ СѓС‡РµС‚РЅС‹С… РґР°РЅРЅС‹С… РїРµСЂРµРґ РѕС‚РїСЂР°РІРєРѕР№
             if (AuthController.Instance != null)
             {
                 if (!AuthController.Instance.ValidateCredentialsAvailability(rawLogin, sanitizedEmail, out string conflictError))
@@ -255,9 +255,9 @@ namespace Solutio.UI
                 }
             }
 
-            // 6. Запуск асинхронной регистрации
+            // 6. Р—Р°РїСѓСЃРє Р°СЃРёРЅС…СЂРѕРЅРЅРѕР№ СЂРµРіРёСЃС‚СЂР°С†РёРё
             SetInteractive(false);
-            DisplayStatus("Проверка данных и создание печати...", successColor);
+            DisplayStatus("РџСЂРѕРІРµСЂРєР° РґР°РЅРЅС‹С… Рё СЃРѕР·РґР°РЅРёРµ РїРµС‡Р°С‚Рё...", successColor);
 
             OnRegistrationSubmitted?.Invoke(rawLogin, sanitizedEmail, rawPassword);
 
@@ -267,14 +267,14 @@ namespace Solutio.UI
             }
             else
             {
-                ShowValidationError(null, "Ошибка: AuthController не обнаружен на сцене!");
+                ShowValidationError(null, "РћС€РёР±РєР°: AuthController РЅРµ РѕР±РЅР°СЂСѓР¶РµРЅ РЅР° СЃС†РµРЅРµ!");
                 SetInteractive(true);
             }
         }
 
         private void HandleCodeSentSuccessfully(string email)
         {
-            DisplayStatus("Печать отправлена на почту!", successColor);
+            DisplayStatus("РџРµС‡Р°С‚СЊ РѕС‚РїСЂР°РІР»РµРЅР° РЅР° РїРѕС‡С‚Сѓ!", successColor);
 
             if (verificationPanel != null)
             {
@@ -283,7 +283,7 @@ namespace Solutio.UI
             }
             else
             {
-                Debug.LogWarning("[RegistrationViewController] Ссылка на VerificationPanel не назначена!");
+                Debug.LogWarning("[RegistrationViewController] РЎСЃС‹Р»РєР° РЅР° VerificationPanel РЅРµ РЅР°Р·РЅР°С‡РµРЅР°!");
             }
         }
 
@@ -295,7 +295,7 @@ namespace Solutio.UI
 
         private void HandleUserRegisteredInDatabase(int userId, string registeredLogin)
         {
-            DisplayStatus($"Профиль {registeredLogin} успешно создан!", successColor);
+            DisplayStatus($"РџСЂРѕС„РёР»СЊ {registeredLogin} СѓСЃРїРµС€РЅРѕ СЃРѕР·РґР°РЅ!", successColor);
             OnRegistrationCompleted?.Invoke(registeredLogin);
         }
 

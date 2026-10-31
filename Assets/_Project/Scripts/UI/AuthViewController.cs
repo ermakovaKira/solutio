@@ -1,4 +1,4 @@
-using System;
+п»їusing System;
 using System.Text.RegularExpressions;
 using DG.Tweening;
 using Solutio.Auth;
@@ -9,8 +9,8 @@ using UnityEngine.UI;
 namespace Solutio.UI
 {
     /// <summary>
-    /// Контроллер формы экранной авторизации с комплексной валидацией,
-    /// криптографической проверкой хэша пароля в базе данных и Dark Fantasy микро-анимациями.
+    /// РљРѕРЅС‚СЂРѕР»Р»РµСЂ С„РѕСЂРјС‹ СЌРєСЂР°РЅРЅРѕР№ Р°РІС‚РѕСЂРёР·Р°С†РёРё СЃ РєРѕРјРїР»РµРєСЃРЅРѕР№ РІР°Р»РёРґР°С†РёРµР№,
+    /// РєСЂРёРїС‚РѕРіСЂР°С„РёС‡РµСЃРєРѕР№ РїСЂРѕРІРµСЂРєРѕР№ С…СЌС€Р° РїР°СЂРѕР»СЏ РІ Р±Р°Р·Рµ РґР°РЅРЅС‹С… Рё Dark Fantasy РјРёРєСЂРѕ-Р°РЅРёРјР°С†РёСЏРјРё.
     /// </summary>
     public sealed class AuthViewController : MonoBehaviour
     {
@@ -43,7 +43,7 @@ namespace Solutio.UI
         [SerializeField] private Color successColor = new Color(0.19f, 0.44f, 0.51f, 1f);
         [SerializeField] private Color failureColor = new Color(0.95f, 0.25f, 0.25f, 1f);
 
-        // Регулярное выражение: логин от 3 до 20 символов (только латиница, цифры и _)
+        // Р РµРіСѓР»СЏСЂРЅРѕРµ РІС‹СЂР°Р¶РµРЅРёРµ: Р»РѕРіРёРЅ РѕС‚ 3 РґРѕ 20 СЃРёРјРІРѕР»РѕРІ (С‚РѕР»СЊРєРѕ Р»Р°С‚РёРЅРёС†Р°, С†РёС„СЂС‹ Рё _)
         private static readonly Regex LoginRegex = new Regex(@"^[a-zA-Z0-9_]{3,20}$", RegexOptions.Compiled);
 
         private bool _isPasswordVisible;
@@ -126,7 +126,7 @@ namespace Solutio.UI
         }
 
         /// <summary>
-        /// Управляет видимостью полей формы (для бесконфликтного открытия ResetPasswordPanel).
+        /// РЈРїСЂР°РІР»СЏРµС‚ РІРёРґРёРјРѕСЃС‚СЊСЋ РїРѕР»РµР№ С„РѕСЂРјС‹ (РґР»СЏ Р±РµСЃРєРѕРЅС„Р»РёРєС‚РЅРѕРіРѕ РѕС‚РєСЂС‹С‚РёСЏ ResetPasswordPanel).
         /// </summary>
         public void SetFieldsActive(bool isActive)
         {
@@ -139,7 +139,7 @@ namespace Solutio.UI
         }
 
         /// <summary>
-        /// Автоматически подставляет логин в поле ввода и переводит фокус на пароль.
+        /// РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїРѕРґСЃС‚Р°РІР»СЏРµС‚ Р»РѕРіРёРЅ РІ РїРѕР»Рµ РІРІРѕРґР° Рё РїРµСЂРµРІРѕРґРёС‚ С„РѕРєСѓСЃ РЅР° РїР°СЂРѕР»СЊ.
         /// </summary>
         public void SetLogin(string login)
         {
@@ -153,8 +153,8 @@ namespace Solutio.UI
             }
         }
         /// <summary>
-        /// Полная очистка формы после выхода пользователя: пароль не должен оставаться в поле ввода.
-        /// Логин подставляется обратно для удобства повторного входа.
+        /// РџРѕР»РЅР°СЏ РѕС‡РёСЃС‚РєР° С„РѕСЂРјС‹ РїРѕСЃР»Рµ РІС‹С…РѕРґР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ: РїР°СЂРѕР»СЊ РЅРµ РґРѕР»Р¶РµРЅ РѕСЃС‚Р°РІР°С‚СЊСЃСЏ РІ РїРѕР»Рµ РІРІРѕРґР°.
+        /// Р›РѕРіРёРЅ РїРѕРґСЃС‚Р°РІР»СЏРµС‚СЃСЏ РѕР±СЂР°С‚РЅРѕ РґР»СЏ СѓРґРѕР±СЃС‚РІР° РїРѕРІС‚РѕСЂРЅРѕРіРѕ РІС…РѕРґР°.
         /// </summary>
         public void ResetForNewSession(string lastLogin)
         {
@@ -173,7 +173,7 @@ namespace Solutio.UI
             }
         }
         /// <summary>
-        /// Обработчик кнопки входа: клиентская валидация и сверка хэша SHA-256 в базе SQLite.
+        /// РћР±СЂР°Р±РѕС‚С‡РёРє РєРЅРѕРїРєРё РІС…РѕРґР°: РєР»РёРµРЅС‚СЃРєР°СЏ РІР°Р»РёРґР°С†РёСЏ Рё СЃРІРµСЂРєР° С…СЌС€Р° SHA-256 РІ Р±Р°Р·Рµ SQLite.
         /// </summary>
         private void HandleSubmit()
         {
@@ -182,48 +182,48 @@ namespace Solutio.UI
 
             if (string.IsNullOrEmpty(rawLogin))
             {
-                ShowValidationError(loginFieldBorder, "Поле логина не может быть пустым!");
+                ShowValidationError(loginFieldBorder, "РџРѕР»Рµ Р»РѕРіРёРЅР° РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј!");
                 return;
             }
 
             if (!LoginRegex.IsMatch(rawLogin))
             {
-                ShowValidationError(loginFieldBorder, "Логин: 3-20 символов (только латиница, цифры и _).");
+                ShowValidationError(loginFieldBorder, "Р›РѕРіРёРЅ: 3-20 СЃРёРјРІРѕР»РѕРІ (С‚РѕР»СЊРєРѕ Р»Р°С‚РёРЅРёС†Р°, С†РёС„СЂС‹ Рё _).");
                 return;
             }
 
             if (string.IsNullOrEmpty(rawPassword))
             {
-                ShowValidationError(passwordFieldBorder, "Поле пароля не может быть пустым!");
+                ShowValidationError(passwordFieldBorder, "РџРѕР»Рµ РїР°СЂРѕР»СЏ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј!");
                 return;
             }
 
             if (rawPassword.Length < 6)
             {
-                ShowValidationError(passwordFieldBorder, "Пароль не может быть короче 6 символов!");
+                ShowValidationError(passwordFieldBorder, "РџР°СЂРѕР»СЊ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РєРѕСЂРѕС‡Рµ 6 СЃРёРјРІРѕР»РѕРІ!");
                 return;
             }
 
-            DisplayStatus("Проверка печати доступа...", successColor);
+            DisplayStatus("РџСЂРѕРІРµСЂРєР° РїРµС‡Р°С‚Рё РґРѕСЃС‚СѓРїР°...", successColor);
 
-            // Боевая проверка учетных данных в SQLite через AuthController
+            // Р‘РѕРµРІР°СЏ РїСЂРѕРІРµСЂРєР° СѓС‡РµС‚РЅС‹С… РґР°РЅРЅС‹С… РІ SQLite С‡РµСЂРµР· AuthController
             if (AuthController.Instance != null)
             {
                 if (AuthController.Instance.TryAuthenticate(rawLogin, rawPassword, out int userId, out string authError))
                 {
-                    DisplayStatus($"Добро пожаловать, {rawLogin}!", successColor);
+                    DisplayStatus($"Р”РѕР±СЂРѕ РїРѕР¶Р°Р»РѕРІР°С‚СЊ, {rawLogin}!", successColor);
                     SetInteractive(false);
                     OnLoginSubmitted?.Invoke(rawLogin, rawPassword);
                 }
                 else
                 {
-                    Image targetBorder = authError.Contains("найден") ? loginFieldBorder : passwordFieldBorder;
+                    Image targetBorder = authError.Contains("РЅР°Р№РґРµРЅ") ? loginFieldBorder : passwordFieldBorder;
                     ShowValidationError(targetBorder, authError);
                 }
             }
             else
             {
-                ShowValidationError(null, "Ошибка: AuthController не обнаружен на сцене!");
+                ShowValidationError(null, "РћС€РёР±РєР°: AuthController РЅРµ РѕР±РЅР°СЂСѓР¶РµРЅ РЅР° СЃС†РµРЅРµ!");
             }
         }
 

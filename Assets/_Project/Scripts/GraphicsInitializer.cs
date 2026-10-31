@@ -1,4 +1,4 @@
-using UnityEngine;
+п»їusing UnityEngine;
 using DG.Tweening;
 
 namespace Solutio.Core.Graphics
@@ -68,8 +68,8 @@ namespace Solutio.Core.Graphics
 
             if (_enableDetailedLogging)
             {
-                Debug.Log($"<color=#D4AF37>[Solutio Engine]</color> Графический конвейер и DOTween успешно инициализированы. " +
-                          $"Зарезервированная емкость: Tweens = {_maxTweenCapacity}, Sequences = {_maxSequenceCapacity}.");
+                Debug.Log($"<color=#D4AF37>[Solutio Engine]</color> Р“СЂР°С„РёС‡РµСЃРєРёР№ РєРѕРЅРІРµР№РµСЂ Рё DOTween СѓСЃРїРµС€РЅРѕ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅС‹. " +
+                          $"Р—Р°СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРЅР°СЏ РµРјРєРѕСЃС‚СЊ: Tweens = {_maxTweenCapacity}, Sequences = {_maxSequenceCapacity}.");
             }
         }
 

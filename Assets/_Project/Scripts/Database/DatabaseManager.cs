@@ -1,4 +1,4 @@
-using System;
+п»їusing System;
 using System.IO;
 using System.Data;
 using Mono.Data.Sqlite;
@@ -7,9 +7,9 @@ using UnityEngine;
 namespace Solutio.Database
 {
     /// <summary>
-    /// Центральный модуль управления базой данных SQLite.
-    /// Обеспечивает прямое ADO.NET подключение, строго параметризированные запросы
-    /// (защита от SQL-инъекций) и сохранение состояния между сценами.
+    /// Р¦РµРЅС‚СЂР°Р»СЊРЅС‹Р№ РјРѕРґСѓР»СЊ СѓРїСЂР°РІР»РµРЅРёСЏ Р±Р°Р·РѕР№ РґР°РЅРЅС‹С… SQLite.
+    /// РћР±РµСЃРїРµС‡РёРІР°РµС‚ РїСЂСЏРјРѕРµ ADO.NET РїРѕРґРєР»СЋС‡РµРЅРёРµ, СЃС‚СЂРѕРіРѕ РїР°СЂР°РјРµС‚СЂРёР·РёСЂРѕРІР°РЅРЅС‹Рµ Р·Р°РїСЂРѕСЃС‹
+    /// (Р·Р°С‰РёС‚Р° РѕС‚ SQL-РёРЅСЉРµРєС†РёР№) Рё СЃРѕС…СЂР°РЅРµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ РјРµР¶РґСѓ СЃС†РµРЅР°РјРё.
     /// </summary>
     public class DatabaseManager : MonoBehaviour
     {
@@ -20,7 +20,7 @@ namespace Solutio.Database
 
         private void Awake()
         {
-            // Паттерн Singleton для единой точки доступа во всем проекте
+            // РџР°С‚С‚РµСЂРЅ Singleton РґР»СЏ РµРґРёРЅРѕР№ С‚РѕС‡РєРё РґРѕСЃС‚СѓРїР° РІРѕ РІСЃРµРј РїСЂРѕРµРєС‚Рµ
             if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
@@ -35,18 +35,18 @@ namespace Solutio.Database
 
         private void Start()
         {
-            // Автоматический тест соединения при старте игры
+            // РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ С‚РµСЃС‚ СЃРѕРµРґРёРЅРµРЅРёСЏ РїСЂРё СЃС‚Р°СЂС‚Рµ РёРіСЂС‹
             TestDatabaseConnection();
         }
 
         /// <summary>
-        /// Формирует URI-строку подключения ADO.NET к файлу в StreamingAssets.
+        /// Р¤РѕСЂРјРёСЂСѓРµС‚ URI-СЃС‚СЂРѕРєСѓ РїРѕРґРєР»СЋС‡РµРЅРёСЏ ADO.NET Рє С„Р°Р№Р»Сѓ РІ StreamingAssets.
         /// </summary>
         private void InitializeDatabasePath()
         {
             string dbPath = Path.Combine(Application.streamingAssetsPath, DatabaseFileName);
 
-            // Проверка на случай запуска из корня в режиме редактора
+            // РџСЂРѕРІРµСЂРєР° РЅР° СЃР»СѓС‡Р°Р№ Р·Р°РїСѓСЃРєР° РёР· РєРѕСЂРЅСЏ РІ СЂРµР¶РёРјРµ СЂРµРґР°РєС‚РѕСЂР°
             if (!File.Exists(dbPath))
             {
                 string rootDbPath = Path.Combine(Directory.GetCurrentDirectory(), DatabaseFileName);
@@ -56,23 +56,23 @@ namespace Solutio.Database
                 }
                 else
                 {
-                    Debug.LogWarning($"[DatabaseManager] Файл базы данных не найден по пути: {dbPath}. Будет создан новый при первом подключении.");
+                    Debug.LogWarning($"[DatabaseManager] Р¤Р°Р№Р» Р±Р°Р·С‹ РґР°РЅРЅС‹С… РЅРµ РЅР°Р№РґРµРЅ РїРѕ РїСѓС‚Рё: {dbPath}. Р‘СѓРґРµС‚ СЃРѕР·РґР°РЅ РЅРѕРІС‹Р№ РїСЂРё РїРµСЂРІРѕРј РїРѕРґРєР»СЋС‡РµРЅРёРё.");
                 }
             }
 
             _connectionString = $"URI=file:{dbPath}";
-            Debug.Log($"[DatabaseManager] Строка подключения сформирована: {_connectionString}");
+            Debug.Log($"[DatabaseManager] РЎС‚СЂРѕРєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ СЃС„РѕСЂРјРёСЂРѕРІР°РЅР°: {_connectionString}");
         }
 
         /// <summary>
-        /// Создает и открывает новое ADO.NET соединение с активированной поддержкой внешних ключей.
+        /// РЎРѕР·РґР°РµС‚ Рё РѕС‚РєСЂС‹РІР°РµС‚ РЅРѕРІРѕРµ ADO.NET СЃРѕРµРґРёРЅРµРЅРёРµ СЃ Р°РєС‚РёРІРёСЂРѕРІР°РЅРЅРѕР№ РїРѕРґРґРµСЂР¶РєРѕР№ РІРЅРµС€РЅРёС… РєР»СЋС‡РµР№.
         /// </summary>
         public SqliteConnection GetOpenConnection()
         {
             SqliteConnection connection = new SqliteConnection(_connectionString);
             connection.Open();
 
-            // Включаем валидацию Foreign Keys для поддержания целостности данных
+            // Р’РєР»СЋС‡Р°РµРј РІР°Р»РёРґР°С†РёСЋ Foreign Keys РґР»СЏ РїРѕРґРґРµСЂР¶Р°РЅРёСЏ С†РµР»РѕСЃС‚РЅРѕСЃС‚Рё РґР°РЅРЅС‹С…
             using (SqliteCommand pragmaCmd = new SqliteCommand("PRAGMA foreign_keys = ON;", connection))
             {
                 pragmaCmd.ExecuteNonQuery();
@@ -82,7 +82,7 @@ namespace Solutio.Database
         }
 
         /// <summary>
-        /// Выполняет параметризированный запрос без возврата строк (INSERT, UPDATE, DELETE).
+        /// Р’С‹РїРѕР»РЅСЏРµС‚ РїР°СЂР°РјРµС‚СЂРёР·РёСЂРѕРІР°РЅРЅС‹Р№ Р·Р°РїСЂРѕСЃ Р±РµР· РІРѕР·РІСЂР°С‚Р° СЃС‚СЂРѕРє (INSERT, UPDATE, DELETE).
         /// </summary>
         public int ExecuteNonQuery(string query, params SqliteParameter[] parameters)
         {
@@ -101,13 +101,13 @@ namespace Solutio.Database
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[DatabaseManager] Ошибка ExecuteNonQuery: {ex.Message}\nЗапрос: {query}");
+                Debug.LogError($"[DatabaseManager] РћС€РёР±РєР° ExecuteNonQuery: {ex.Message}\nР—Р°РїСЂРѕСЃ: {query}");
                 return -1;
             }
         }
 
         /// <summary>
-        /// Выполняет параметризированный запрос и возвращает единичное скалярное значение (COUNT, MAX, ID).
+        /// Р’С‹РїРѕР»РЅСЏРµС‚ РїР°СЂР°РјРµС‚СЂРёР·РёСЂРѕРІР°РЅРЅС‹Р№ Р·Р°РїСЂРѕСЃ Рё РІРѕР·РІСЂР°С‰Р°РµС‚ РµРґРёРЅРёС‡РЅРѕРµ СЃРєР°Р»СЏСЂРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ (COUNT, MAX, ID).
         /// </summary>
         public object ExecuteScalar(string query, params SqliteParameter[] parameters)
         {
@@ -126,13 +126,13 @@ namespace Solutio.Database
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[DatabaseManager] Ошибка ExecuteScalar: {ex.Message}\nЗапрос: {query}");
+                Debug.LogError($"[DatabaseManager] РћС€РёР±РєР° ExecuteScalar: {ex.Message}\nР—Р°РїСЂРѕСЃ: {query}");
                 return null;
             }
         }
 
         /// <summary>
-        /// Выполняет запрос на чтение (SELECT) и возвращает заполненную таблицу DataTable.
+        /// Р’С‹РїРѕР»РЅСЏРµС‚ Р·Р°РїСЂРѕСЃ РЅР° С‡С‚РµРЅРёРµ (SELECT) Рё РІРѕР·РІСЂР°С‰Р°РµС‚ Р·Р°РїРѕР»РЅРµРЅРЅСѓСЋ С‚Р°Р±Р»РёС†Сѓ DataTable.
         /// </summary>
         public DataTable ExecuteQuery(string query, params SqliteParameter[] parameters)
         {
@@ -157,14 +157,14 @@ namespace Solutio.Database
             catch (Exception ex)
             {
                 Debug.LogError($"[Datab" +
-                    $"aseManager] Ошибка ExecuteQuery: {ex.Message}\nЗапрос: {query}");
+                    $"aseManager] РћС€РёР±РєР° ExecuteQuery: {ex.Message}\nР—Р°РїСЂРѕСЃ: {query}");
             }
 
             return dataTable;
         }
 
         /// <summary>
-        /// Тестовая проверка работоспособности соединения и считывания пула героев.
+        /// РўРµСЃС‚РѕРІР°СЏ РїСЂРѕРІРµСЂРєР° СЂР°Р±РѕС‚РѕСЃРїРѕСЃРѕР±РЅРѕСЃС‚Рё СЃРѕРµРґРёРЅРµРЅРёСЏ Рё СЃС‡РёС‚С‹РІР°РЅРёСЏ РїСѓР»Р° РіРµСЂРѕРµРІ.
         /// </summary>
         private void TestDatabaseConnection()
         {
@@ -173,16 +173,16 @@ namespace Solutio.Database
                 object countResult = ExecuteScalar("SELECT COUNT(*) FROM heroes;");
                 if (countResult != null && Convert.ToInt32(countResult) > 0)
                 {
-                    Debug.Log($"<color=#00FF66><b>[DatabaseManager] УСПЕШНОЕ ПОДКЛЮЧЕНИЕ К SQLite!</b></color> В пуле базы данных найдено героев: <b>{countResult}</b>");
+                    Debug.Log($"<color=#00FF66><b>[DatabaseManager] РЈРЎРџР•РЁРќРћР• РџРћР”РљР›Р®Р§Р•РќРР• Рљ SQLite!</b></color> Р’ РїСѓР»Рµ Р±Р°Р·С‹ РґР°РЅРЅС‹С… РЅР°Р№РґРµРЅРѕ РіРµСЂРѕРµРІ: <b>{countResult}</b>");
                 }
                 else
                 {
-                    Debug.LogWarning("[DatabaseManager] Подключение успешно, но таблица heroes пуста.");
+                    Debug.LogWarning("[DatabaseManager] РџРѕРґРєР»СЋС‡РµРЅРёРµ СѓСЃРїРµС€РЅРѕ, РЅРѕ С‚Р°Р±Р»РёС†Р° heroes РїСѓСЃС‚Р°.");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError($"<color=red><b>[DatabaseManager] Ошибка подключения к базе данных:</b></color> {ex.Message}");
+                Debug.LogError($"<color=red><b>[DatabaseManager] РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Р±Р°Р·Рµ РґР°РЅРЅС‹С…:</b></color> {ex.Message}");
             }
         }
     }

@@ -1,21 +1,21 @@
-using System;
+п»їusing System;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace Solutio.Auth
 {
     /// <summary>
-    /// Криптографический модуль хэширования и верификации паролей пользователей.
-    /// Использует стандарт SHA-256 без сторонних зависимостей.
+    /// РљСЂРёРїС‚РѕРіСЂР°С„РёС‡РµСЃРєРёР№ РјРѕРґСѓР»СЊ С…СЌС€РёСЂРѕРІР°РЅРёСЏ Рё РІРµСЂРёС„РёРєР°С†РёРё РїР°СЂРѕР»РµР№ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№.
+    /// РСЃРїРѕР»СЊР·СѓРµС‚ СЃС‚Р°РЅРґР°СЂС‚ SHA-256 Р±РµР· СЃС‚РѕСЂРѕРЅРЅРёС… Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№.
     /// </summary>
     public static class PasswordSecurity
     {
         /// <summary>
-        /// Вычисляет криптографический хэш SHA-256 от переданной строки пароля.
-        /// Возвращает 64-символьную шестнадцатеричную строку в нижнем регистре.
+        /// Р’С‹С‡РёСЃР»СЏРµС‚ РєСЂРёРїС‚РѕРіСЂР°С„РёС‡РµСЃРєРёР№ С…СЌС€ SHA-256 РѕС‚ РїРµСЂРµРґР°РЅРЅРѕР№ СЃС‚СЂРѕРєРё РїР°СЂРѕР»СЏ.
+        /// Р’РѕР·РІСЂР°С‰Р°РµС‚ 64-СЃРёРјРІРѕР»СЊРЅСѓСЋ С€РµСЃС‚РЅР°РґС†Р°С‚РµСЂРёС‡РЅСѓСЋ СЃС‚СЂРѕРєСѓ РІ РЅРёР¶РЅРµРј СЂРµРіРёСЃС‚СЂРµ.
         /// </summary>
-        /// <param name="rawPassword">Открытый пароль пользователя.</param>
-        /// <returns>Хэш SHA-256.</returns>
+        /// <param name="rawPassword">РћС‚РєСЂС‹С‚С‹Р№ РїР°СЂРѕР»СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.</param>
+        /// <returns>РҐСЌС€ SHA-256.</returns>
         public static string HashPassword(string rawPassword)
         {
             if (string.IsNullOrEmpty(rawPassword))
@@ -28,7 +28,7 @@ namespace Solutio.Auth
                 byte[] inputBytes = Encoding.UTF8.GetBytes(rawPassword);
                 byte[] hashBytes = sha256.ComputeHash(inputBytes);
 
-                // Оптимизированное формирование hex-строки
+                // РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅРѕРµ С„РѕСЂРјРёСЂРѕРІР°РЅРёРµ hex-СЃС‚СЂРѕРєРё
                 StringBuilder stringBuilder = new StringBuilder(hashBytes.Length * 2);
                 for (int i = 0; i < hashBytes.Length; i++)
                 {
@@ -40,11 +40,11 @@ namespace Solutio.Auth
         }
 
         /// <summary>
-        /// Безопасно сверяет сырой пароль с сохраненным в базе данных хэшем.
+        /// Р‘РµР·РѕРїР°СЃРЅРѕ СЃРІРµСЂСЏРµС‚ СЃС‹СЂРѕР№ РїР°СЂРѕР»СЊ СЃ СЃРѕС…СЂР°РЅРµРЅРЅС‹Рј РІ Р±Р°Р·Рµ РґР°РЅРЅС‹С… С…СЌС€РµРј.
         /// </summary>
-        /// <param name="rawPassword">Введенный пароль для проверки.</param>
-        /// <param name="storedHash">Хэш из базы данных.</param>
-        /// <returns>True, если хэши совпадают, иначе False.</returns>
+        /// <param name="rawPassword">Р’РІРµРґРµРЅРЅС‹Р№ РїР°СЂРѕР»СЊ РґР»СЏ РїСЂРѕРІРµСЂРєРё.</param>
+        /// <param name="storedHash">РҐСЌС€ РёР· Р±Р°Р·С‹ РґР°РЅРЅС‹С….</param>
+        /// <returns>True, РµСЃР»Рё С…СЌС€Рё СЃРѕРІРїР°РґР°СЋС‚, РёРЅР°С‡Рµ False.</returns>
         public static bool VerifyPassword(string rawPassword, string storedHash)
         {
             if (string.IsNullOrEmpty(rawPassword) || string.IsNullOrEmpty(storedHash))

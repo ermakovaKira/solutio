@@ -1,4 +1,4 @@
-using System;
+п»їusing System;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,8 +6,8 @@ using UnityEngine.UI;
 namespace Solutio.UI
 {
     /// <summary>
-    /// Контроллер процедурного размытия заднего плана (UI Blur / Frosted Glass) для модальных окон.
-    /// Анимация построена на плавной интерполяции альфа-канала и свойств шейдера без вызова SetActive.
+    /// РљРѕРЅС‚СЂРѕР»Р»РµСЂ РїСЂРѕС†РµРґСѓСЂРЅРѕРіРѕ СЂР°Р·РјС‹С‚РёСЏ Р·Р°РґРЅРµРіРѕ РїР»Р°РЅР° (UI Blur / Frosted Glass) РґР»СЏ РјРѕРґР°Р»СЊРЅС‹С… РѕРєРѕРЅ.
+    /// РђРЅРёРјР°С†РёСЏ РїРѕСЃС‚СЂРѕРµРЅР° РЅР° РїР»Р°РІРЅРѕР№ РёРЅС‚РµСЂРїРѕР»СЏС†РёРё Р°Р»СЊС„Р°-РєР°РЅР°Р»Р° Рё СЃРІРѕР№СЃС‚РІ С€РµР№РґРµСЂР° Р±РµР· РІС‹Р·РѕРІР° SetActive.
     /// </summary>
     [RequireComponent(typeof(Image))]
     public sealed class UIBlurEffect : MonoBehaviour
@@ -30,23 +30,23 @@ namespace Solutio.UI
 
             if (blurMaterialTemplate != null)
             {
-                // Создаем независимый экземпляр материала
+                // РЎРѕР·РґР°РµРј РЅРµР·Р°РІРёСЃРёРјС‹Р№ СЌРєР·РµРјРїР»СЏСЂ РјР°С‚РµСЂРёР°Р»Р°
                 _instancedMaterial = new Material(blurMaterialTemplate);
                 _backgroundImage.material = _instancedMaterial;
             }
             else
             {
-                Debug.LogWarning("[UIBlurEffect] Шаблон материала не назначен. Используется базовый цвет.");
+                Debug.LogWarning("[UIBlurEffect] РЁР°Р±Р»РѕРЅ РјР°С‚РµСЂРёР°Р»Р° РЅРµ РЅР°Р·РЅР°С‡РµРЅ. РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Р±Р°Р·РѕРІС‹Р№ С†РІРµС‚.");
             }
 
-            // Инициализация в скрытом состоянии (без вызова SetActive для сохранения плавности Canvas)
+            // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІ СЃРєСЂС‹С‚РѕРј СЃРѕСЃС‚РѕСЏРЅРёРё (Р±РµР· РІС‹Р·РѕРІР° SetActive РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїР»Р°РІРЅРѕСЃС‚Рё Canvas)
             SetBlurIntensity(0f);
             SetAlpha(0f);
             _backgroundImage.raycastTarget = false;
         }
 
         /// <summary>
-        /// Плавно активирует эффект размытия заднего плана.
+        /// РџР»Р°РІРЅРѕ Р°РєС‚РёРІРёСЂСѓРµС‚ СЌС„С„РµРєС‚ СЂР°Р·РјС‹С‚РёСЏ Р·Р°РґРЅРµРіРѕ РїР»Р°РЅР°.
         /// </summary>
         public void EnableBlur(Action onComplete = null)
         {
@@ -67,7 +67,7 @@ namespace Solutio.UI
         }
 
         /// <summary>
-        /// Плавно отключает эффект размытия заднего плана.
+        /// РџР»Р°РІРЅРѕ РѕС‚РєР»СЋС‡Р°РµС‚ СЌС„С„РµРєС‚ СЂР°Р·РјС‹С‚РёСЏ Р·Р°РґРЅРµРіРѕ РїР»Р°РЅР°.
         /// </summary>
         public void DisableBlur(Action onComplete = null)
         {
