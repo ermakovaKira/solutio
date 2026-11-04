@@ -33,7 +33,7 @@ namespace Solutio.Draft
         [SerializeField] private DraftViewController view;
 
         [Header("Timer")]
-        [SerializeField] private DraftTimeSource timeSource = DraftTimeSource.UnscaledTime;
+        [SerializeField] private DraftTimeSource timeSource = DraftTimeSource.RealtimeSinceStartup;
 
         [Header("AI (простой ИИ Дня 11)")]
         [SerializeField, Range(0.3f, 10f)] private float aiThinkMinSeconds = 1.5f;
