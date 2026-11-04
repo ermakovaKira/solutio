@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
+using Solutio.Database;
 using Solutio.Heroes;
 using Solutio.Session;
+using Solutio.Settings;
 using UnityEngine;
 
 namespace Solutio.Draft
@@ -21,10 +22,12 @@ namespace Solutio.Draft
     /// Корутины и WaitForSeconds не используются: начало хода и момент решения ИИ хранятся как метки времени,
     /// а в Update сравниваются с текущим временем. Поэтому сворачивание окна и потеря фокуса не «замораживают»
     /// таймер: после возвращения в игру остаток сразу соответствует реально прошедшему времени.
-    /// Логика вынесена в чистые C#-классы DraftState и DraftTurnClock, MonoBehaviour только связывает их
-    /// с представлением DraftViewController.
-    /// ИИ на Дне 11 делает простой случайный выбор после «раздумья»; стратегический выбор по AiStrategyProfile
-    /// и автопик из SQLite при истечении времени — День 12.
+    /// Логика вынесена в чистые C#-классы, MonoBehaviour только связывает их с представлением DraftViewController:
+    /// DraftState — правила и журнал ходов, DraftTurnClock — время хода и запас,
+    /// DraftAiStrategist — решения ИИ по профилю сложности (статы, баланс ролей, контрпик),
+    /// DraftAutoPickService — принудительный выбор случайного ID героя из таблицы heroes SQLite при истечении времени.
+    /// Все случайные решения берутся из Random матча (MatchSessionConfig.CreateMatchRandom), поэтому драфт
+    /// воспроизводим по seed.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class DraftController : MonoBehaviour
@@ -35,7 +38,7 @@ namespace Solutio.Draft
         [Header("Timer")]
         [SerializeField] private DraftTimeSource timeSource = DraftTimeSource.RealtimeSinceStartup;
 
-        [Header("AI (простой ИИ Дня 11)")]
+        [Header("AI (время «раздумья» перед ходом)")]
         [SerializeField, Range(0.3f, 10f)] private float aiThinkMinSeconds = 1.5f;
         [SerializeField, Range(0.3f, 15f)] private float aiThinkMaxSeconds = 3.5f;
 
@@ -54,11 +57,11 @@ namespace Solutio.Draft
         /// <summary>Состояние текущего драфта (null, если драфт не запущен).</summary>
         public DraftState State => _state;
 
-        private readonly List<HeroRecord> _availableBuffer = new List<HeroRecord>(32);
-
         private Func<double> _timeReader;
         private DraftState _state;
         private DraftTurnClock _clock;
+        private DraftAiStrategist _strategist;
+        private DraftAutoPickService _autoPick;
         private System.Random _random;
         private double _aiDecisionAt;
         private bool _isSubscribed;
@@ -214,12 +217,15 @@ namespace Solutio.Draft
 
             _clock = new DraftTurnClock(_timeReader, view.TurnDurationSeconds, view.ReserveDurationSeconds);
             _random = config.CreateMatchRandom();
+            _strategist = new DraftAiStrategist(config.AiProfile);
+            _autoPick = new DraftAutoPickService(CreateHeroIdSource());
             LastResult = null;
             IsRunning = true;
 
             if (enableDetailedLogging)
             {
                 Debug.Log($"<color=#307082>[DraftController]</color> Драфт начат: seed {config.MatchSeed}, ход {_clock.TurnDuration:0} с, запас {_clock.ReserveDuration:0} с, источник времени {timeSource}.");
+                Debug.Log($"<color=#307082>[DraftController]</color> ИИ «{MatchCatalog.GetDifficultyDisplayName(config.Difficulty)}»: {config.AiProfile}. Автопик: {(_autoPick.HasSource ? "SQLite heroes" : "только пул в памяти")}.");
             }
 
             BeginTurn();
@@ -282,18 +288,32 @@ namespace Solutio.Draft
             }
         }
 
+        /// <summary>
+        /// Ход ИИ: решение принимает DraftAiStrategist по профилю сложности матча.
+        /// </summary>
         private void MakeAiMove()
         {
-            HeroRecord choice = PickRandomAvailable();
-            if (choice == null)
+            DraftAiDecision decision = _strategist.Decide(_state, _random);
+
+            if (!decision.IsSuccess)
             {
                 HandleTimeout(DraftSide.Ai);
                 return;
             }
 
-            CommitChoice(DraftSide.Ai, choice.Id, DraftResolution.AiChoice);
+            if (enableDetailedLogging)
+            {
+                string color = decision.Mode == DraftAiDecisionMode.Optimal ? "#C8A040" : "#8A8F99";
+                Debug.Log($"<color={color}>[DraftController]</color> {decision}");
+            }
+
+            CommitChoice(DraftSide.Ai, decision.Hero.Id, DraftResolution.AiChoice);
         }
 
+        /// <summary>
+        /// Истечение времени хода: бан сгорает, пик закрывается принудительным выбором случайного ID героя
+        /// из таблицы heroes SQLite (DraftAutoPickService) с проверкой через DraftState.TryApply(..., AutoPick).
+        /// </summary>
         private void HandleTimeout(DraftSide side)
         {
             DraftStep step = _state.CurrentStep;
@@ -310,26 +330,33 @@ namespace Solutio.Draft
                 return;
             }
 
-            HeroRecord autoPick = PickRandomAvailable();
-            if (autoPick == null)
+            AutoPickOutcome outcome = _autoPick.Pick(_state, _random);
+
+            if (!outcome.IsSuccess)
             {
-                Debug.LogError("[DraftController] Нет доступных героев для автопика — драфт остановлен.", this);
+                Debug.LogError($"[DraftController] {outcome} — драфт остановлен.", this);
                 StopDraft();
                 return;
             }
 
-            if (_state.TryApply(side, autoPick.Id, DraftResolution.AutoPick, out DraftActionRecord pickRecord) != DraftApplyResult.Applied)
+            if (outcome.Source == AutoPickSource.MemoryFallback)
             {
-                Debug.LogError($"[DraftController] Автопик героя {autoPick.Id} не применён — драфт остановлен.", this);
+                Debug.LogWarning($"[DraftController] Автопик выполнен без базы данных: {outcome}", this);
+            }
+
+            DraftApplyResult result = _state.TryApply(side, outcome.Hero.Id, DraftResolution.AutoPick, out DraftActionRecord pickRecord);
+            if (result != DraftApplyResult.Applied)
+            {
+                Debug.LogError($"[DraftController] Автопик героя {outcome.Hero.Id} не применён ({result}) — драфт остановлен.", this);
                 StopDraft();
                 return;
             }
 
-            view.ApplyAction(pickRecord.Step.StepIndex, autoPick.Id);
+            view.ApplyAction(pickRecord.Step.StepIndex, outcome.Hero.Id);
 
             if (enableDetailedLogging)
             {
-                Debug.Log($"<color=#C04040>[DraftController]</color> Время вышло, автопик (заглушка до Дня 12): {pickRecord}. {snapshot}");
+                Debug.Log($"<color=#C04040>[DraftController]</color> Время вышло. {outcome}. Ход: {pickRecord}. {snapshot}");
             }
 
             BeginTurn();
@@ -378,6 +405,8 @@ namespace Solutio.Draft
             IsRunning = false;
             _state = null;
             _clock = null;
+            _strategist = null;
+            _autoPick = null;
             _random = null;
         }
 
@@ -385,16 +414,21 @@ namespace Solutio.Draft
 
         #region Helpers
 
-        private HeroRecord PickRandomAvailable()
+        /// <summary>
+        /// Источник ID для автопика: репозиторий таблицы heroes. Создаётся при каждом запуске драфта,
+        /// потому что DatabaseManager может инициализироваться позже DraftController.
+        /// </summary>
+        private IAvailableHeroIdSource CreateHeroIdSource()
         {
-            _state.GetAvailableHeroes(_availableBuffer);
+            DatabaseManager database = DatabaseManager.Instance;
 
-            if (_availableBuffer.Count == 0)
+            if (database == null)
             {
+                Debug.LogWarning("[DraftController] DatabaseManager не найден — автопик будет выбирать из пула в памяти.", this);
                 return null;
             }
 
-            return _availableBuffer[_random.Next(0, _availableBuffer.Count)];
+            return new HeroRepository(database);
         }
 
         private void PushActiveTimer(DraftClockSnapshot snapshot)

@@ -229,7 +229,29 @@ namespace Solutio.Draft
                 }
             }
         }
+        /// <summary>
+        /// Заполняет буфер идентификаторами занятых героев (забаненных и выбранных) в порядке пула
+        /// без выделения памяти (буфер очищается). Используется автопиком для исключения из запроса к SQLite.
+        /// </summary>
+        public void GetTakenHeroIds(List<int> buffer)
+        {
+            if (buffer == null)
+            {
+                throw new ArgumentNullException(nameof(buffer));
+            }
 
+            buffer.Clear();
+
+            for (int i = 0; i < _pool.Count; i++)
+            {
+                int heroId = _pool[i].Id;
+
+                if (_takenHeroIds.Contains(heroId))
+                {
+                    buffer.Add(heroId);
+                }
+            }
+        }
         /// <summary>
         /// Проверяет, можно ли стороне закрыть текущий ход указанным героем. Состояние не меняет.
         /// </summary>
