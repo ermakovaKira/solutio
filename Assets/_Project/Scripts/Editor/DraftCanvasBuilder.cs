@@ -108,10 +108,11 @@ namespace Solutio.EditorTools
 
         private static bool PrepareAssets()
         {
-            _font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+            // Шрифт интерфейса задается в TMP Settings (Solutio → Применить шрифты); LiberationSans — запасной.
+            _font = TMP_Settings.defaultFontAsset;
             if (_font == null)
             {
-                _font = TMP_Settings.defaultFontAsset;
+                _font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
             }
 
             if (_font == null)
