@@ -33,13 +33,31 @@ namespace Solutio.Auth
 
         [Header("Security & Timeout Settings")]
         [SerializeField] private float codeLifetimeSeconds = 300f;
+        [Tooltip("Сколько секунд после подтверждения кода сброса пользователь может задать новый пароль.")]
+        [SerializeField] private float passwordResetWindowSeconds = 600f;
         [SerializeField] private bool mockMode = false;
+
+        /// <summary>Минимальная длина пароля — общая для регистрации, входа и сброса.</summary>
+        public const int MinPasswordLength = 6;
+
+        /// <summary>Назначение выданного кода: код сброса не может завершить регистрацию и наоборот.</summary>
+        private enum VerificationPurpose
+        {
+            None,
+            Registration,
+            PasswordReset
+        }
 
         // Временный буфер верификации
         private string _activeTargetEmail = string.Empty;
         private string _activeGeneratedCode = string.Empty;
         private DateTime _codeExpirationTimestamp;
+        private VerificationPurpose _activeCodePurpose = VerificationPurpose.None;
         private bool _isCurrentlySending;
+
+        // Подтвержденный сброс пароля: менять пароль можно только этой почте и только до истечения окна
+        private string _verifiedResetEmail = string.Empty;
+        private DateTime _verifiedResetExpirationTimestamp;
 
         // Данные кандидата на регистрацию (пароль хранится ТОЛЬКО в виде хэша SHA-256)
         private string _pendingLogin = string.Empty;
@@ -54,6 +72,10 @@ namespace Solutio.Auth
         public event Action<int, string> OnUserRegisteredSuccessfully;
         public event Action<int, string> OnUserAuthenticated;
         public event Action<string> OnRegistrationDatabaseError;
+
+        /// <summary>True, если код сброса подтвержден и окно смены пароля еще открыто.</summary>
+        public bool HasVerifiedPasswordReset =>
+            !string.IsNullOrEmpty(_verifiedResetEmail) && DateTime.UtcNow <= _verifiedResetExpirationTimestamp;
 
         private void Awake()
         {
@@ -240,18 +262,23 @@ namespace Solutio.Auth
             return await SendVerificationCodeAsync(sanitizedEmail, isPasswordReset: false);
         }
 
+        /// <summary>
+        /// Отправляет 6-значный код на почту. События OnCodeSentSuccessfully / OnCodeSendFailed
+        /// вызываются только для регистрации (на них подписана форма регистрации);
+        /// сброс пароля работает по возвращаемому значению, чтобы не открывать панель кода регистрации.
+        /// </summary>
         public async Task<bool> SendVerificationCodeAsync(string targetEmail, bool isPasswordReset = false)
         {
             if (_isCurrentlySending)
             {
-                OnCodeSendFailed?.Invoke("Отправка уже выполняется, подождите...");
+                if (!isPasswordReset) OnCodeSendFailed?.Invoke("Отправка уже выполняется, подождите...");
                 return false;
             }
 
             if (!EmailValidator.ValidateEmail(targetEmail, out string sanitizedEmail, out string validationError))
             {
                 Debug.LogWarning($"[AuthController] Ошибка валидации email: {validationError}");
-                OnCodeSendFailed?.Invoke(validationError);
+                if (!isPasswordReset) OnCodeSendFailed?.Invoke(validationError);
                 return false;
             }
 
@@ -259,6 +286,8 @@ namespace Solutio.Auth
             _activeTargetEmail = sanitizedEmail;
             _activeGeneratedCode = GenerateSecureCode();
             _codeExpirationTimestamp = DateTime.UtcNow.AddSeconds(codeLifetimeSeconds);
+            _activeCodePurpose = isPasswordReset ? VerificationPurpose.PasswordReset : VerificationPurpose.Registration;
+            ClearVerifiedPasswordReset();
 
             if (mockMode)
             {
@@ -268,7 +297,7 @@ namespace Solutio.Auth
                           $"<color=#00FF66><b>СЕКРЕТНЫЙ КОД:</b></color> <size=16><b>{_activeGeneratedCode}</b></size> (Действует 5 мин)");
 
                 _isCurrentlySending = false;
-                OnCodeSentSuccessfully?.Invoke(_activeTargetEmail);
+                if (!isPasswordReset) OnCodeSentSuccessfully?.Invoke(_activeTargetEmail);
                 return true;
             }
 
@@ -329,24 +358,71 @@ namespace Solutio.Auth
             if (sendSuccess)
             {
                 Debug.Log($"<color=#00FF66>[AuthController] Письмо УСПЕШНО отправлено на {_activeTargetEmail} через SMTP!</color>");
-                OnCodeSentSuccessfully?.Invoke(_activeTargetEmail);
+                if (!isPasswordReset) OnCodeSentSuccessfully?.Invoke(_activeTargetEmail);
                 return true;
             }
             else
             {
                 Debug.LogError($"<color=red>[AuthController SMTP Error]</color> Не удалось отправить письмо: {failureReason}");
-                OnCodeSendFailed?.Invoke("Ошибка почтового сервера при отправке кода.");
+                _activeGeneratedCode = string.Empty;
+                _activeCodePurpose = VerificationPurpose.None;
+                if (!isPasswordReset) OnCodeSendFailed?.Invoke("Ошибка почтового сервера при отправке кода.");
                 return false;
             }
         }
 
+        /// <summary>
+        /// Проверяет код регистрации и при успехе записывает нового пользователя в users.
+        /// Код, выданный для сброса пароля, здесь не принимается.
+        /// </summary>
         public bool VerifyCode(string enteredCode, out string errorMessage)
+        {
+            if (!VerifyCodeCore(enteredCode, VerificationPurpose.Registration, out errorMessage))
+            {
+                return false;
+            }
+
+            if (_isRegistrationPending)
+            {
+                return CommitRegistrationToDatabase(out errorMessage);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Проверяет код сброса пароля. При успехе открывает окно смены пароля
+        /// (passwordResetWindowSeconds) строго для почты, на которую был выслан код.
+        /// Регистрацию не завершает ни при каких условиях.
+        /// </summary>
+        public bool VerifyPasswordResetCode(string enteredCode, out string errorMessage)
+        {
+            string verifiedEmail = _activeTargetEmail;
+
+            if (!VerifyCodeCore(enteredCode, VerificationPurpose.PasswordReset, out errorMessage))
+            {
+                return false;
+            }
+
+            _verifiedResetEmail = verifiedEmail;
+            _verifiedResetExpirationTimestamp = DateTime.UtcNow.AddSeconds(passwordResetWindowSeconds);
+            Debug.Log($"<color=#307082><b>[AuthController]</b></color> Сброс пароля для {_verifiedResetEmail} подтвержден, окно смены пароля — {passwordResetWindowSeconds:0} с.");
+            return true;
+        }
+
+        private bool VerifyCodeCore(string enteredCode, VerificationPurpose expectedPurpose, out string errorMessage)
         {
             errorMessage = string.Empty;
 
             if (string.IsNullOrWhiteSpace(_activeGeneratedCode))
             {
                 errorMessage = "Код не запрашивался или сессия сброшена!";
+                return false;
+            }
+
+            if (_activeCodePurpose != expectedPurpose)
+            {
+                errorMessage = "Этот код выдан для другого действия. Запросите новый код.";
                 return false;
             }
 
@@ -365,16 +441,144 @@ namespace Solutio.Auth
             }
 
             Debug.Log($"<color=#00FF66><b>[AuthController]</b> Email {_activeTargetEmail} успешно верифицирован!</color>");
-            OnEmailVerified?.Invoke(_activeTargetEmail);
             _activeGeneratedCode = string.Empty;
+            _activeCodePurpose = VerificationPurpose.None;
+            OnEmailVerified?.Invoke(_activeTargetEmail);
+            return true;
+        }
 
-            if (_isRegistrationPending)
+        #endregion
+
+        #region Password Reset
+
+        /// <summary>
+        /// Проверяет, зарегистрирована ли почта в таблице users (без учета регистра).
+        /// </summary>
+        public bool IsEmailRegistered(string email, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+
+            if (DatabaseManager.Instance == null)
             {
-                return CommitRegistrationToDatabase(out errorMessage);
+                errorMessage = "Сервис базы данных недоступен!";
+                return false;
+            }
+
+            const string query = "SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(@email);";
+            object countResult = DatabaseManager.Instance.ExecuteScalar(
+                query,
+                CreateParameter("@email", DbType.String, (email ?? string.Empty).Trim()));
+
+            if (countResult == null || countResult == DBNull.Value)
+            {
+                errorMessage = "Ошибка обращения к базе данных.";
+                return false;
+            }
+
+            if (Convert.ToInt32(countResult) == 0)
+            {
+                errorMessage = "Аккаунт с таким Email не зарегистрирован!";
+                return false;
             }
 
             return true;
         }
+
+        /// <summary>
+        /// Задает новый пароль пользователю, чью почту подтвердил VerifyPasswordResetCode.
+        /// Почта берется из внутреннего состояния, а не из UI, — сменить пароль чужому аккаунту нельзя.
+        /// Возвращает логин пользователя для автоподстановки на экране входа.
+        /// </summary>
+        public bool TryResetPassword(string newPassword, out string userLogin, out string errorMessage)
+        {
+            userLogin = string.Empty;
+            errorMessage = string.Empty;
+
+            if (string.IsNullOrEmpty(_verifiedResetEmail))
+            {
+                errorMessage = "Сначала подтвердите код из письма!";
+                return false;
+            }
+
+            if (DateTime.UtcNow > _verifiedResetExpirationTimestamp)
+            {
+                ClearVerifiedPasswordReset();
+                errorMessage = "Время на смену пароля истекло. Запросите новый код.";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(newPassword) || newPassword.Length < MinPasswordLength)
+            {
+                errorMessage = $"Пароль должен содержать не менее {MinPasswordLength} символов!";
+                return false;
+            }
+
+            if (DatabaseManager.Instance == null)
+            {
+                errorMessage = "Сервис базы данных недоступен!";
+                return false;
+            }
+
+            const string selectQuery = "SELECT login FROM users WHERE LOWER(email) = LOWER(@email);";
+            object loginResult = DatabaseManager.Instance.ExecuteScalar(
+                selectQuery,
+                CreateParameter("@email", DbType.String, _verifiedResetEmail));
+
+            if (loginResult == null || loginResult == DBNull.Value)
+            {
+                ClearVerifiedPasswordReset();
+                errorMessage = "Аккаунт с этим Email не найден!";
+                return false;
+            }
+
+            const string updateQuery = "UPDATE users SET password_hash = @password_hash WHERE LOWER(email) = LOWER(@email);";
+            int rowsAffected = DatabaseManager.Instance.ExecuteNonQuery(
+                updateQuery,
+                CreateParameter("@password_hash", DbType.String, PasswordSecurity.HashPassword(newPassword)),
+                CreateParameter("@email", DbType.String, _verifiedResetEmail));
+
+            if (rowsAffected != 1)
+            {
+                Debug.LogError($"[AuthController] Сброс пароля для {_verifiedResetEmail}: изменено строк — {rowsAffected}, ожидалась 1.");
+                errorMessage = "Не удалось сохранить новый пароль в базе данных!";
+                return false;
+            }
+
+            userLogin = loginResult.ToString();
+            Debug.Log($"<color=#00FF66><b>[PASSWORD RESET]</b> Пароль пользователя <b>{userLogin}</b> ({_verifiedResetEmail}) обновлен.</color>");
+            ClearVerifiedPasswordReset();
+            return true;
+        }
+
+        /// <summary>
+        /// Отменяет незавершенный сброс пароля (закрытие панели): гасит код сброса и окно смены пароля.
+        /// Код регистрации, если он активен, не трогает.
+        /// </summary>
+        public void CancelPasswordReset()
+        {
+            if (_activeCodePurpose == VerificationPurpose.PasswordReset)
+            {
+                _activeGeneratedCode = string.Empty;
+                _activeCodePurpose = VerificationPurpose.None;
+            }
+
+            ClearVerifiedPasswordReset();
+        }
+
+        private void ClearVerifiedPasswordReset()
+        {
+            _verifiedResetEmail = string.Empty;
+            _verifiedResetExpirationTimestamp = DateTime.MinValue;
+        }
+
+        private static SqliteParameter CreateParameter(string name, DbType type, object value)
+        {
+            return new SqliteParameter(name, type) { Value = value ?? DBNull.Value };
+        }
+
+        #endregion
+
+        #region Registration Commit
 
         private bool CommitRegistrationToDatabase(out string errorMessage)
         {

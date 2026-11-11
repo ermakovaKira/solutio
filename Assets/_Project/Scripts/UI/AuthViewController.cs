@@ -30,6 +30,7 @@ namespace Solutio.UI
         [SerializeField] private Button submitLoginButton;
         [SerializeField] private Button switchToRegisterButton;
         [SerializeField] private Button togglePasswordButton;
+        [SerializeField] private Button forgotPasswordButton;
         [SerializeField] private Image togglePasswordIcon;
 
         [Header("Feedback Elements")]
@@ -135,6 +136,7 @@ namespace Solutio.UI
             if (submitLoginButton != null) submitLoginButton.gameObject.SetActive(isActive);
             if (switchToRegisterButton != null) switchToRegisterButton.gameObject.SetActive(isActive);
             if (togglePasswordButton != null) togglePasswordButton.gameObject.SetActive(isActive);
+            if (forgotPasswordButton != null) forgotPasswordButton.gameObject.SetActive(isActive);
             if (subtitleText != null) subtitleText.gameObject.SetActive(isActive);
         }
 
@@ -288,6 +290,7 @@ namespace Solutio.UI
             submitLoginButton.interactable = isInteractive;
             switchToRegisterButton.interactable = isInteractive;
             togglePasswordButton.interactable = isInteractive;
+            if (forgotPasswordButton != null) forgotPasswordButton.interactable = isInteractive;
         }
 
         private void ResetFormState()

@@ -1,7 +1,5 @@
 ﻿using System;
 using DG.Tweening;
-using Mono.Data.Sqlite;
-using Solutio.Database;
 using Solutio.UI;
 using TMPro;
 using UnityEngine;
@@ -10,12 +8,21 @@ using UnityEngine.UI;
 namespace Solutio.Auth
 {
     /// <summary>
-    /// Контроллер двухэтапного сброса пароля:
-    /// Этап 1: ввод Email и отправка письма.
+    /// Контроллер трехэтапного сброса пароля:
+    /// Этап 1: ввод Email, проверка по таблице users и отправка письма с кодом.
     /// Этап 2: ввод 6-значного кода и подтверждение.
+    /// Этап 3: ввод и повтор нового пароля, запись хэша в users через AuthController.
     /// </summary>
     public sealed class ResetPasswordController : MonoBehaviour
     {
+        private enum ResetStage
+        {
+            Email,
+            Code,
+            NewPassword,
+            Completed
+        }
+
         [Header("UI References - Stage 1 (Email)")]
         [SerializeField] private TMP_InputField emailInputField;
         [SerializeField] private Button submitButton;
@@ -27,20 +34,32 @@ namespace Solutio.Auth
         [Header("UI References - Stage 2 (Code)")]
         [SerializeField] private TMP_InputField codeInputField;
 
+        [Header("UI References - Stage 3 (New Password)")]
+        [SerializeField] private TMP_InputField newPasswordInputField;
+        [SerializeField] private TMP_InputField confirmPasswordInputField;
+
         [Header("Auth View Reference")]
         [SerializeField] private AuthViewController authViewController;
 
-        [Header("Database Verification Settings")]
-        [SerializeField] private bool checkDatabase = false;
+        [Header("Timing")]
+        [Tooltip("Пауза между сообщением об успешной смене пароля и закрытием панели.")]
+        [SerializeField] private float successCloseDelaySeconds = 1.5f;
 
         [Header("Visual Theme Settings")]
         [SerializeField] private Color successColor = new Color(0.19f, 0.44f, 0.51f, 1f); // #307082
         [SerializeField] private Color failureColor = new Color(0.95f, 0.25f, 0.25f, 1f);
 
+        private const string CodeTextAreaName = "Text Area";
+        private const string CodeTextName = "Text";
+        private const string CodePlaceholderName = "Placeholder";
+
         private CanvasGroup _canvasGroup;
         private RectTransform _rectTransform;
         private Tween _shakeTween;
-        private bool _isAwaitingCode = false;
+        private Tween _closeDelayTween;
+        private ResetStage _stage = ResetStage.Email;
+        private bool _isCodeFieldWired = false;
+        private bool _isSending = false;
 
         private void Awake()
         {
@@ -50,7 +69,7 @@ namespace Solutio.Auth
                 submitButton.onClick.AddListener(HandleSubmit);
 
             if (cancelButton != null)
-                cancelButton.onClick.AddListener(HidePanel);
+                cancelButton.onClick.AddListener(HandleCancel);
         }
 
         private void EnsureComponents()
@@ -73,11 +92,16 @@ namespace Solutio.Auth
             if (submitButton != null) submitButton.onClick.RemoveAllListeners();
             if (cancelButton != null) cancelButton.onClick.RemoveAllListeners();
             _shakeTween?.Kill();
+            _closeDelayTween?.Kill();
         }
 
+        /// <summary>
+        /// Открывает панель на первом этапе. Вызывается кнопкой «Забыли пароль?» (persistent listener).
+        /// </summary>
         public void ShowPanel()
         {
             EnsureComponents();
+            _closeDelayTween?.Kill();
 
             if (authViewController != null)
             {
@@ -97,9 +121,16 @@ namespace Solutio.Auth
             _rectTransform.DOScale(1f, 0.35f).SetEase(Ease.OutBack).SetUpdate(true);
         }
 
-        public void HidePanel()
+        /// <summary>
+        /// Закрывает панель и возвращает форму входа. onHidden вызывается после того, как поля входа снова видны.
+        /// </summary>
+        public void HidePanel(Action onHidden = null)
         {
             EnsureComponents();
+            _closeDelayTween?.Kill();
+
+            _canvasGroup.blocksRaycasts = false;
+            _canvasGroup.interactable = false;
 
             _canvasGroup.DOFade(0f, 0.2f).SetUpdate(true);
             _rectTransform.DOScale(0.85f, 0.2f).SetUpdate(true).OnComplete(() =>
@@ -110,183 +141,460 @@ namespace Solutio.Auth
                 {
                     authViewController.SetFieldsActive(true);
                 }
+
+                onHidden?.Invoke();
             });
         }
 
+        private void HandleCancel()
+        {
+            if (AuthController.Instance != null)
+            {
+                AuthController.Instance.CancelPasswordReset();
+            }
+
+            HidePanel();
+        }
+
+        #region Stages
+
         private void ResetToStageOne()
         {
-            _isAwaitingCode = false;
+            _stage = ResetStage.Email;
+            _isSending = false;
 
-            if (emailInputField != null)
-            {
-                emailInputField.gameObject.SetActive(true);
-                emailInputField.text = string.Empty;
-                emailInputField.interactable = true;
-            }
+            SetFieldVisible(emailInputField, true);
+            SetFieldVisible(codeInputField, false);
+            SetFieldVisible(newPasswordInputField, false);
+            SetFieldVisible(confirmPasswordInputField, false);
 
-            if (codeInputField != null)
-            {
-                codeInputField.gameObject.SetActive(false);
-                codeInputField.text = string.Empty;
-            }
+            SetDescription("Введите Email, привязанный к вашему профилю. Мы вышлем код восстановления:");
+            SetSubmitCaption("ВЫСЛАТЬ КОД");
+            ClearStatus();
 
-            if (descriptionText != null)
-            {
-                descriptionText.text = "Введите Email, привязанный к вашему профилю. Мы вышлем код восстановления:";
-            }
-
-            if (submitButtonText != null)
-            {
-                submitButtonText.text = "ВЫСЛАТЬ КОД";
-            }
-
-            if (statusFeedbackText != null) statusFeedbackText.text = string.Empty;
             if (submitButton != null) submitButton.interactable = true;
+            if (cancelButton != null) cancelButton.interactable = true;
         }
 
         private void SwitchToStageTwo(string email)
         {
-            _isAwaitingCode = true;
+            _stage = ResetStage.Code;
 
-            // Прячем поле Email, показываем ввод 6 цифр кода
-            if (emailInputField != null) emailInputField.gameObject.SetActive(false);
+            SetFieldVisible(emailInputField, false);
+
             if (codeInputField != null)
             {
-                codeInputField.gameObject.SetActive(true);
-                codeInputField.interactable = true;
-                codeInputField.text = string.Empty;
+                // Связи поля перестраиваются, пока оно выключено: в OnEnable TMP_InputField
+                // создает каретку внутри Text Viewport и подписывается на свой Text Component.
+                if (codeInputField.gameObject.activeSelf) codeInputField.gameObject.SetActive(false);
+                EnsureCodeFieldWiring();
             }
 
-            if (descriptionText != null)
-            {
-                descriptionText.text = $"Код выслан на: <color=#307082><b>{email}</b></color>\nВведите 6 цифр для подтверждения:";
-            }
+            SetFieldVisible(codeInputField, true);
 
-            if (submitButtonText != null)
-            {
-                submitButtonText.text = "ПОДТВЕРДИТЬ КОД";
-            }
+            SetDescription($"Код выслан на: <color=#307082><b>{email}</b></color>\nВведите 6 цифр для подтверждения:");
+            SetSubmitCaption("ПОДТВЕРДИТЬ КОД");
+            ClearStatus();
 
-            if (statusFeedbackText != null) statusFeedbackText.text = string.Empty;
             if (submitButton != null) submitButton.interactable = true;
+            FocusField(codeInputField);
         }
 
-        private async void HandleSubmit()
+        private void SwitchToStageThree()
         {
-            // ЭТАП 1: Отправка письма
-            if (!_isAwaitingCode)
+            _stage = ResetStage.NewPassword;
+
+            SetFieldVisible(codeInputField, false);
+            SetFieldVisible(newPasswordInputField, true);
+            SetFieldVisible(confirmPasswordInputField, true);
+
+            SetDescription($"Код подтвержден. Придумайте новый пароль (не менее {AuthController.MinPasswordLength} символов):");
+            SetSubmitCaption("СОХРАНИТЬ ПАРОЛЬ");
+            ShowStatus("Email подтвержден!", successColor);
+
+            if (submitButton != null) submitButton.interactable = true;
+            FocusField(newPasswordInputField);
+        }
+
+        #endregion
+
+        #region Submit
+
+        private void HandleSubmit()
+        {
+            switch (_stage)
             {
-                string rawEmail = emailInputField != null ? emailInputField.text.Trim() : string.Empty;
-
-                if (string.IsNullOrEmpty(rawEmail))
-                {
-                    ShowError("Введите адрес электронной почты!");
-                    return;
-                }
-
-                if (!EmailValidator.ValidateEmail(rawEmail, out string sanitizedEmail, out string validationError))
-                {
-                    ShowError(validationError);
-                    return;
-                }
-
-                if (checkDatabase && DatabaseManager.Instance != null)
-                {
-                    try
-                    {
-                        string checkQuery = "SELECT COUNT(*) FROM users WHERE email = @email;";
-                        object countResult = DatabaseManager.Instance.ExecuteScalar(checkQuery, new SqliteParameter("@email", sanitizedEmail));
-                        int usersFound = countResult != null ? Convert.ToInt32(countResult) : 0;
-
-                        if (usersFound == 0)
-                        {
-                            ShowError("Аккаунт с таким Email не зарегистрирован!");
-                            return;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError($"[ResetPasswordController] Ошибка БД: {ex.Message}");
-                    }
-                }
-
-                if (statusFeedbackText != null)
-                {
-                    statusFeedbackText.text = "Отправка тайного кода...";
-                    statusFeedbackText.color = successColor;
-                }
-
-                if (submitButton != null) submitButton.interactable = false;
-
-                if (AuthController.Instance != null)
-                {
-                    bool isSent = await AuthController.Instance.SendVerificationCodeAsync(sanitizedEmail, isPasswordReset: true);
-
-                    if (isSent)
-                    {
-                        // ПЕРЕКЛЮЧАЕМСЯ НА ЭТАП ВВОДА КОДА!
-                        SwitchToStageTwo(sanitizedEmail);
-                    }
-                    else
-                    {
-                        ShowError("Не удалось отправить код. Проверьте соединение.");
-                        if (submitButton != null) submitButton.interactable = true;
-                    }
-                }
-                else
-                {
-                    ShowError("Ошибка: AuthController не найден!");
-                    if (submitButton != null) submitButton.interactable = true;
-                }
+                case ResetStage.Email:
+                    SubmitEmailAsync();
+                    break;
+                case ResetStage.Code:
+                    SubmitCode();
+                    break;
+                case ResetStage.NewPassword:
+                    SubmitNewPassword();
+                    break;
             }
-            // ЭТАП 2: Проверка введенного 6-значного кода
+        }
+
+        private async void SubmitEmailAsync()
+        {
+            if (_isSending)
+            {
+                return;
+            }
+
+            string rawEmail = emailInputField != null ? emailInputField.text.Trim() : string.Empty;
+
+            if (string.IsNullOrEmpty(rawEmail))
+            {
+                ShowError("Введите адрес электронной почты!");
+                return;
+            }
+
+            if (!EmailValidator.ValidateEmail(rawEmail, out string sanitizedEmail, out string validationError))
+            {
+                ShowError(validationError);
+                return;
+            }
+
+            AuthController auth = AuthController.Instance;
+
+            if (auth == null)
+            {
+                ShowError("Ошибка: AuthController не найден!");
+                return;
+            }
+
+            if (!auth.IsEmailRegistered(sanitizedEmail, out string lookupError))
+            {
+                ShowError(lookupError);
+                return;
+            }
+
+            ShowStatus("Отправка тайного кода...", successColor);
+            _isSending = true;
+            if (submitButton != null) submitButton.interactable = false;
+
+            bool isSent = await auth.SendVerificationCodeAsync(sanitizedEmail, isPasswordReset: true);
+
+            _isSending = false;
+
+            // Панель могли закрыть или уничтожить, пока письмо уходило
+            if (this == null || !gameObject.activeInHierarchy || _stage != ResetStage.Email)
+            {
+                return;
+            }
+
+            if (isSent)
+            {
+                SwitchToStageTwo(sanitizedEmail);
+            }
             else
             {
-                string enteredCode = codeInputField != null ? codeInputField.text.Trim() : string.Empty;
-
-                if (string.IsNullOrEmpty(enteredCode) || enteredCode.Length < 6)
-                {
-                    ShowError("Введите все 6 цифр кода!");
-                    return;
-                }
-
-                if (AuthController.Instance == null)
-                {
-                    ShowError("Ошибка: AuthController не найден на сцене!");
-                    return;
-                }
-
-                if (AuthController.Instance.VerifyCode(enteredCode, out string errorMsg))
-                {
-                    if (statusFeedbackText != null)
-                    {
-                        statusFeedbackText.text = "Email подтвержден! Задайте новый пароль.";
-                        statusFeedbackText.color = successColor;
-                    }
-
-                    if (submitButton != null) submitButton.interactable = false;
-                    if (codeInputField != null) codeInputField.interactable = false;
-
-                    Debug.Log("<color=#307082>[PASSWORD RESET SUCCESS] Код подтвержден, личность верифицирована!</color>");
-                }
-                else
-                {
-                    ShowError(errorMsg);
-                }
+                ShowError("Не удалось отправить код. Проверьте соединение.");
+                if (submitButton != null) submitButton.interactable = true;
             }
+        }
+
+        private void SubmitCode()
+        {
+            string enteredCode = codeInputField != null ? codeInputField.text.Trim() : string.Empty;
+
+            if (string.IsNullOrEmpty(enteredCode) || enteredCode.Length < 6)
+            {
+                ShowError("Введите все 6 цифр кода!");
+                return;
+            }
+
+            if (AuthController.Instance == null)
+            {
+                ShowError("Ошибка: AuthController не найден на сцене!");
+                return;
+            }
+
+            if (AuthController.Instance.VerifyPasswordResetCode(enteredCode, out string errorMsg))
+            {
+                Debug.Log("<color=#307082>[PASSWORD RESET] Код подтвержден, личность верифицирована — этап нового пароля.</color>");
+                SwitchToStageThree();
+            }
+            else
+            {
+                ShowError(errorMsg);
+            }
+        }
+
+        private void SubmitNewPassword()
+        {
+            string newPassword = newPasswordInputField != null ? newPasswordInputField.text : string.Empty;
+            string confirmPassword = confirmPasswordInputField != null ? confirmPasswordInputField.text : string.Empty;
+
+            if (string.IsNullOrEmpty(newPassword))
+            {
+                ShowError("Введите новый пароль!");
+                return;
+            }
+
+            if (newPassword.Length < AuthController.MinPasswordLength)
+            {
+                ShowError($"Пароль должен содержать не менее {AuthController.MinPasswordLength} символов!");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(confirmPassword))
+            {
+                ShowError("Повторите новый пароль!");
+                return;
+            }
+
+            if (!string.Equals(newPassword, confirmPassword, StringComparison.Ordinal))
+            {
+                ShowError("Введенные пароли не совпадают!");
+                return;
+            }
+
+            if (AuthController.Instance == null)
+            {
+                ShowError("Ошибка: AuthController не найден на сцене!");
+                return;
+            }
+
+            if (!AuthController.Instance.TryResetPassword(newPassword, out string userLogin, out string resetError))
+            {
+                ShowError(resetError);
+
+                // Окно смены пароля истекло или почта пропала из базы — начинаем заново
+                if (!AuthController.Instance.HasVerifiedPasswordReset)
+                {
+                    if (submitButton != null) submitButton.interactable = false;
+                    _closeDelayTween?.Kill();
+                    _closeDelayTween = DOVirtual.DelayedCall(successCloseDelaySeconds, ResetToStageOne)
+                        .SetRecyclable(false)
+                        .SetUpdate(true)
+                        .SetLink(gameObject);
+                }
+
+                return;
+            }
+
+            _stage = ResetStage.Completed;
+            ClearPasswordFields();
+
+            if (submitButton != null) submitButton.interactable = false;
+            if (cancelButton != null) cancelButton.interactable = false;
+            if (newPasswordInputField != null) newPasswordInputField.interactable = false;
+            if (confirmPasswordInputField != null) confirmPasswordInputField.interactable = false;
+
+            ShowStatus("Пароль обновлен! Войдите с новым паролем.", successColor);
+
+            _closeDelayTween?.Kill();
+            _closeDelayTween = DOVirtual.DelayedCall(successCloseDelaySeconds, () =>
+                {
+                    HidePanel(() =>
+                    {
+                        if (authViewController != null)
+                        {
+                            authViewController.SetLogin(userLogin);
+                        }
+                    });
+                })
+                .SetRecyclable(false)
+                .SetUpdate(true)
+                .SetLink(gameObject);
+        }
+
+        #endregion
+
+        #region UI Helpers
+
+        private static void SetFieldVisible(TMP_InputField field, bool isVisible)
+        {
+            if (field == null)
+            {
+                return;
+            }
+
+            field.text = string.Empty;
+            field.interactable = isVisible;
+            field.gameObject.SetActive(isVisible);
+        }
+
+        private static void FocusField(TMP_InputField field)
+        {
+            if (field != null && field.gameObject.activeInHierarchy)
+            {
+                field.Select();
+                field.ActivateInputField();
+            }
+        }
+
+        private void ClearPasswordFields()
+        {
+            if (newPasswordInputField != null) newPasswordInputField.text = string.Empty;
+            if (confirmPasswordInputField != null) confirmPasswordInputField.text = string.Empty;
+        }
+
+        private void SetDescription(string text)
+        {
+            if (descriptionText != null) descriptionText.text = text;
+        }
+
+        private void SetSubmitCaption(string text)
+        {
+            if (submitButtonText != null) submitButtonText.text = text;
+        }
+
+        private void ShowStatus(string message, Color color)
+        {
+            if (statusFeedbackText == null)
+            {
+                return;
+            }
+
+            statusFeedbackText.text = message;
+            statusFeedbackText.color = color;
+        }
+
+        private void ClearStatus()
+        {
+            if (statusFeedbackText != null) statusFeedbackText.text = string.Empty;
         }
 
         private void ShowError(string message)
         {
-            if (statusFeedbackText != null)
-            {
-                statusFeedbackText.text = message;
-                statusFeedbackText.color = failureColor;
-            }
+            ShowStatus(message, failureColor);
 
             _shakeTween?.Kill();
             _rectTransform.anchoredPosition = new Vector2(0, -15);
-            _shakeTween = _rectTransform.DOShakeAnchorPos(0.35f, new Vector2(15f, 0f), 20, 90, false, true).SetUpdate(true);
+            _shakeTween = _rectTransform.DOShakeAnchorPos(0.35f, new Vector2(15f, 0f), 20, 90, false, true)
+                .SetRecyclable(false)
+                .SetUpdate(true)
+                .SetLink(gameObject);
         }
+
+        #endregion
+
+        #region Code Field Self-Check
+
+        /// <summary>
+        /// Привязывает поле кода к его собственным дочерним объектам (Text Area / Text / Placeholder)
+        /// и к своему фону. Защищает от ссылок на одноименные объекты другого канваса
+        /// (например, на поле кода RegistrationCanvas), из-за которых ввод уходил в скрытый текст.
+        /// Вызывается при выключенном поле, один раз за жизнь компонента.
+        /// </summary>
+        private void EnsureCodeFieldWiring()
+        {
+            if (_isCodeFieldWired || codeInputField == null)
+            {
+                return;
+            }
+
+            Transform fieldRoot = codeInputField.transform;
+            RectTransform textArea = fieldRoot.Find(CodeTextAreaName) as RectTransform;
+
+            if (textArea == null)
+            {
+                Debug.LogError($"[ResetPasswordController] У поля '{codeInputField.name}' не найден дочерний объект '{CodeTextAreaName}'. Привязка не выполнена.");
+                return;
+            }
+
+            Transform textTransform = textArea.Find(CodeTextName);
+            Transform placeholderTransform = textArea.Find(CodePlaceholderName);
+            TMP_Text ownText = textTransform != null ? textTransform.GetComponent<TMP_Text>() : null;
+            Graphic ownPlaceholder = placeholderTransform != null ? placeholderTransform.GetComponent<Graphic>() : null;
+            Graphic ownBackground = codeInputField.GetComponent<Graphic>();
+
+            if (ownText == null)
+            {
+                Debug.LogError($"[ResetPasswordController] У поля '{codeInputField.name}' не найден '{CodeTextAreaName}/{CodeTextName}' с компонентом TMP_Text. Привязка не выполнена.");
+                return;
+            }
+
+            int fixedCount = 0;
+
+            if (codeInputField.textViewport != textArea)
+            {
+                LogRewire("Text Viewport", codeInputField.textViewport, textArea);
+                codeInputField.textViewport = textArea;
+                fixedCount++;
+            }
+
+            if (codeInputField.textComponent != ownText)
+            {
+                LogRewire("Text Component", codeInputField.textComponent, ownText);
+                codeInputField.textComponent = ownText;
+                fixedCount++;
+            }
+
+            if (ownPlaceholder != null && codeInputField.placeholder != ownPlaceholder)
+            {
+                LogRewire("Placeholder", codeInputField.placeholder, ownPlaceholder);
+                codeInputField.placeholder = ownPlaceholder;
+                fixedCount++;
+            }
+
+            if (ownBackground != null && codeInputField.targetGraphic != ownBackground)
+            {
+                LogRewire("Target Graphic", codeInputField.targetGraphic, ownBackground);
+                codeInputField.targetGraphic = ownBackground;
+                fixedCount++;
+            }
+
+            if (!ownText.gameObject.activeSelf)
+            {
+                Debug.LogWarning($"[ResetPasswordController] Объект '{CodeTextAreaName}/{CodeTextName}' поля '{codeInputField.name}' был выключен — включаю, иначе введенные цифры не видны.");
+                ownText.gameObject.SetActive(true);
+                fixedCount++;
+            }
+
+            _isCodeFieldWired = true;
+
+            if (fixedCount > 0)
+            {
+                Debug.LogWarning($"[ResetPasswordController] Поле кода '{codeInputField.name}': исправлено связей — {fixedCount}. Запустите «Solutio → Достроить панель сброса пароля», чтобы исправить префаб.");
+            }
+            else
+            {
+                Debug.Log($"[ResetPasswordController] Поле кода '{codeInputField.name}': все связи корректны.");
+            }
+        }
+
+        private static void LogRewire(string fieldLabel, UnityEngine.Object previous, UnityEngine.Object current)
+        {
+            string previousPath = previous != null ? GetHierarchyPath(previous) : "None";
+            string currentPath = GetHierarchyPath(current);
+            Debug.LogWarning($"[ResetPasswordController] {fieldLabel}: '{previousPath}' → '{currentPath}'.");
+        }
+
+        private static string GetHierarchyPath(UnityEngine.Object target)
+        {
+            Transform node = null;
+
+            if (target is Component component)
+            {
+                node = component.transform;
+            }
+            else if (target is GameObject gameObjectTarget)
+            {
+                node = gameObjectTarget.transform;
+            }
+
+            if (node == null)
+            {
+                return target.name;
+            }
+
+            string path = node.name;
+            Transform parent = node.parent;
+
+            while (parent != null)
+            {
+                path = parent.name + "/" + path;
+                parent = parent.parent;
+            }
+
+            return path;
+        }
+
+        #endregion
     }
 }
