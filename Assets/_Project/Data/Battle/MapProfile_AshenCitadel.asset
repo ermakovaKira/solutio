@@ -1,0 +1,204 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4702ed2bc8b26af4e9b7ad7a22cfcb7d, type: 3}
+  m_Name: MapProfile_AshenCitadel
+  m_EditorClassIdentifier: Assembly-CSharp::Solutio.Battle.MapProfile
+  mapKey: AshenCitadel
+  background: {fileID: 21300000, guid: 1cda2b8936e783d469edc362edb345e3, type: 3}
+  globalLightColor: {r: 0.62, g: 0.42, b: 0.48, a: 1}
+  globalLightIntensity: 0.5
+  structureScale: 1
+  towerPlinthScaleY: 0
+  userLightColor: {r: 0.25, g: 0.6, b: 1, a: 1}
+  aiLightColor: {r: 1, g: 0.18, b: 0.2, a: 1}
+  towerLightRadius: 1.4
+  towerLightIntensity: 1.4
+  baseLightRadius: 2.6
+  baseLightIntensity: 1.6
+  bloomIntensity: 1.25
+  bloomThreshold: 0.8
+  bloomTint: {r: 1, g: 0.78, b: 0.6, a: 1}
+  vignetteIntensity: 0.32
+  userBase: {x: 0.13346355, y: 0.32617188}
+  aiBase: {x: 0.9016927, y: 0.82421875}
+  towers:
+  - Side: 0
+    Lane: 0
+    Tier: 2
+    Position: {x: 0.100260414, y: 0.64453125}
+  - Side: 0
+    Lane: 0
+    Tier: 1
+    Position: {x: 0.18880208, y: 0.88183594}
+  - Side: 0
+    Lane: 1
+    Tier: 2
+    Position: {x: 0.28515625, y: 0.40234375}
+  - Side: 0
+    Lane: 1
+    Tier: 1
+    Position: {x: 0.41015625, y: 0.49609375}
+  - Side: 0
+    Lane: 2
+    Tier: 2
+    Position: {x: 0.3125, y: 0.20703125}
+  - Side: 0
+    Lane: 2
+    Tier: 1
+    Position: {x: 0.5286458, y: 0.203125}
+  - Side: 1
+    Lane: 0
+    Tier: 1
+    Position: {x: 0.48502603, y: 0.8808594}
+  - Side: 1
+    Lane: 0
+    Tier: 2
+    Position: {x: 0.6972656, y: 0.8701172}
+  - Side: 1
+    Lane: 1
+    Tier: 1
+    Position: {x: 0.6269531, y: 0.6357422}
+  - Side: 1
+    Lane: 1
+    Tier: 2
+    Position: {x: 0.7454427, y: 0.7128906}
+  - Side: 1
+    Lane: 2
+    Tier: 1
+    Position: {x: 0.8626302, y: 0.20507812}
+  - Side: 1
+    Lane: 2
+    Tier: 2
+    Position: {x: 0.93359375, y: 0.5048828}
+  lanes:
+  - Lane: 0
+    Points:
+    - {x: 0.13346355, y: 0.32617188}
+    - {x: 0.10091146, y: 0.42382812}
+    - {x: 0.09765625, y: 0.5410156}
+    - {x: 0.09765625, y: 0.6464844}
+    - {x: 0.110677086, y: 0.7753906}
+    - {x: 0.13997395, y: 0.85839844}
+    - {x: 0.18880208, y: 0.8828125}
+    - {x: 0.26041666, y: 0.8779297}
+    - {x: 0.33854166, y: 0.8828125}
+    - {x: 0.41666666, y: 0.8779297}
+    - {x: 0.48502603, y: 0.8828125}
+    - {x: 0.5859375, y: 0.8730469}
+    - {x: 0.6953125, y: 0.875}
+    - {x: 0.7682292, y: 0.86816406}
+    - {x: 0.8333333, y: 0.84375}
+    - {x: 0.9016927, y: 0.82421875}
+  - Lane: 1
+    Points:
+    - {x: 0.13346355, y: 0.32617188}
+    - {x: 0.21484375, y: 0.36523438}
+    - {x: 0.2799479, y: 0.40234375}
+    - {x: 0.3515625, y: 0.453125}
+    - {x: 0.40885416, y: 0.4970703}
+    - {x: 0.46875, y: 0.54589844}
+    - {x: 0.5208333, y: 0.578125}
+    - {x: 0.5729167, y: 0.609375}
+    - {x: 0.625, y: 0.63671875}
+    - {x: 0.6901042, y: 0.6777344}
+    - {x: 0.7421875, y: 0.71484375}
+    - {x: 0.80078125, y: 0.7441406}
+    - {x: 0.8463542, y: 0.78027344}
+    - {x: 0.9016927, y: 0.82421875}
+  - Lane: 2
+    Points:
+    - {x: 0.13346355, y: 0.32617188}
+    - {x: 0.18880208, y: 0.23828125}
+    - {x: 0.24739583, y: 0.2109375}
+    - {x: 0.3125, y: 0.20703125}
+    - {x: 0.41666666, y: 0.20703125}
+    - {x: 0.52734375, y: 0.20410156}
+    - {x: 0.60546875, y: 0.20410156}
+    - {x: 0.65755206, y: 0.20410156}
+    - {x: 0.74869794, y: 0.20703125}
+    - {x: 0.859375, y: 0.20703125}
+    - {x: 0.9114583, y: 0.23828125}
+    - {x: 0.9296875, y: 0.3359375}
+    - {x: 0.9329427, y: 0.5048828}
+    - {x: 0.9244792, y: 0.5996094}
+    - {x: 0.90494794, y: 0.70703125}
+    - {x: 0.9016927, y: 0.82421875}
+  zones:
+  - Type: 0
+    Position: {x: 0.41666666, y: 0.8779297}
+    Radius: 0.029296875
+  - Type: 0
+    Position: {x: 0.5208333, y: 0.578125}
+    Radius: 0.032552082
+  - Type: 0
+    Position: {x: 0.65755206, y: 0.20410156}
+    Radius: 0.032552082
+  accentLights:
+  - Position: {x: 0.21484375, y: 0.70703125}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.54036456, y: 0.74121094}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.8203125, y: 0.4580078}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.61848956, y: 0.36035156}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.390625, y: 0.9609375}
+    Color: {r: 1, g: 0.45, b: 0.12, a: 1}
+    Radius: 1.6
+    Intensity: 1.8
+    Flicker: 0.35
+  - Position: {x: 0.4231771, y: 0.765625}
+    Color: {r: 1, g: 0.45, b: 0.12, a: 1}
+    Radius: 1.6
+    Intensity: 1.8
+    Flicker: 0.35
+  - Position: {x: 0.49479166, y: 0.66796875}
+    Color: {r: 1, g: 0.45, b: 0.12, a: 1}
+    Radius: 1.5
+    Intensity: 1.6
+    Flicker: 0.35
+  - Position: {x: 0.5598958, y: 0.47265625}
+    Color: {r: 1, g: 0.45, b: 0.12, a: 1}
+    Radius: 1.6
+    Intensity: 1.8
+    Flicker: 0.35
+  - Position: {x: 0.60546875, y: 0.31640625}
+    Color: {r: 1, g: 0.45, b: 0.12, a: 1}
+    Radius: 1.5
+    Intensity: 1.6
+    Flicker: 0.35
+  - Position: {x: 0.6770833, y: 0.12109375}
+    Color: {r: 1, g: 0.45, b: 0.12, a: 1}
+    Radius: 1.6
+    Intensity: 1.8
+    Flicker: 0.35
+  featureType: 1
+  featureName: "\u041F\u043B\u0430\u043C\u044F \u0421\u043C\u043E\u0440\u043E\u0434\u0438\u043D\u044B"
+  featureDescription: "\u0420\u0430\u0437 \u0432 40 \u0441\u0435\u043A\u0443\u043D\u0434
+    \u043E\u0433\u043D\u0435\u043D\u043D\u0430\u044F \u0440\u0435\u043A\u0430 \u0432\u0441\u043F\u044B\u0445\u0438\u0432\u0430\u0435\u0442:
+    \u0432\u0441\u0435 \u044E\u043D\u0438\u0442\u044B \u043D\u0430 \u043C\u043E\u0441\u0442\u0430\u0445
+    \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0443\u0440\u043E\u043D."
+  featurePeriodSeconds: 40
+  featurePrimaryValue: 60
+  featureSecondaryValue: 0

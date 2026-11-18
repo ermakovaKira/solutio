@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 870141e8c611c494e9cfeb7cffa9048b, type: 3}
+  m_Name: MapProfileLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::Solutio.Battle.MapProfileLibrary
+  profiles:
+  - {fileID: 11400000, guid: 46a135f215375b34aa7c4bff93062b4a, type: 2}
+  - {fileID: 11400000, guid: 33a302c2355efda4f8bf65c275f34148, type: 2}
+  - {fileID: 11400000, guid: 6af0667199215e04e90351efd419daae, type: 2}
+  - {fileID: 11400000, guid: c6656f4dbba45e04b95f8c8a279a39f5, type: 2}
+  - {fileID: 11400000, guid: 8fb126914b97ce04699edb3f93b1506f, type: 2}

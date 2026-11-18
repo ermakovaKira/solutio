@@ -49,11 +49,11 @@ namespace Solutio.Settings
 
         private static readonly MapDefinition[] MapDefinitions =
         {
-            new MapDefinition("CathedralRuins", "Руины Собора", "Обрушенные своды древнего собора, освещённые витражами."),
-            new MapDefinition("CrimsonWastes", "Багровые Пустоши", "Выжженная равнина под кровавым небом."),
-            new MapDefinition("FrozenCrypt", "Ледяной Склеп", "Подземные гробницы, скованные вечным инеем."),
-            new MapDefinition("AbyssalMire", "Топи Бездны", "Ядовитые болота, над которыми клубится туман."),
-            new MapDefinition("AshenCitadel", "Пепельная Цитадель", "Крепость павшего ордена в облаках пепла.")
+            new MapDefinition("CathedralRuins", "Сгоревшее капище", "Обугленный храм старых богов. Мид раздваивается вокруг идола, а Перун карает сильнейшего."),
+            new MapDefinition("CrimsonWastes", "Поле брани", "Древнее поле битвы под кровавым закатом. Короткие прямые пути и щедрая награда за победы."),
+            new MapDefinition("FrozenCrypt", "Царство Мороза", "Владения Морозко. Короткий мид, долгие обходные пути и стужа, сковывающая шаг."),
+            new MapDefinition("AbyssalMire", "Болото Кикиморы", "Гнилые гати над трясиной. Туман слепит башни, а топь держит каждого, кто в неё ступил."),
+            new MapDefinition("AshenCitadel", "Калинов мост", "Огненная река Смородина между Явью и Навью. Мосты то и дело вспыхивают пламенем.")
         };
 
         private static readonly int[] FpsValues = { 60, 144, 240, 360, UncappedFps };

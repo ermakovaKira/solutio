@@ -1,0 +1,207 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4702ed2bc8b26af4e9b7ad7a22cfcb7d, type: 3}
+  m_Name: MapProfile_FrozenCrypt
+  m_EditorClassIdentifier: Assembly-CSharp::Solutio.Battle.MapProfile
+  mapKey: FrozenCrypt
+  background: {fileID: 21300000, guid: baa47b007c045f04c9efa9d826226c1a, type: 3}
+  globalLightColor: {r: 0.52, g: 0.62, b: 0.9, a: 1}
+  globalLightIntensity: 0.58
+  structureScale: 1
+  towerPlinthScaleY: 1.3
+  userLightColor: {r: 0.25, g: 0.6, b: 1, a: 1}
+  aiLightColor: {r: 1, g: 0.18, b: 0.2, a: 1}
+  towerLightRadius: 1.4
+  towerLightIntensity: 1.4
+  baseLightRadius: 2.6
+  baseLightIntensity: 1.6
+  bloomIntensity: 1.1
+  bloomThreshold: 0.8
+  bloomTint: {r: 0.75, g: 0.9, b: 1, a: 1}
+  vignetteIntensity: 0.32
+  userBase: {x: 0.15104167, y: 0.36035156}
+  aiBase: {x: 0.84765625, y: 0.6826172}
+  towers:
+  - Side: 0
+    Lane: 0
+    Tier: 2
+    Position: {x: 0.04296875, y: 0.5859375}
+  - Side: 0
+    Lane: 0
+    Tier: 1
+    Position: {x: 0.16015625, y: 0.8701172}
+  - Side: 0
+    Lane: 1
+    Tier: 2
+    Position: {x: 0.27604166, y: 0.41601562}
+  - Side: 0
+    Lane: 1
+    Tier: 1
+    Position: {x: 0.40234375, y: 0.47753906}
+  - Side: 0
+    Lane: 2
+    Tier: 2
+    Position: {x: 0.25846353, y: 0.1796875}
+  - Side: 0
+    Lane: 2
+    Tier: 1
+    Position: {x: 0.4934896, y: 0.17773438}
+  - Side: 1
+    Lane: 0
+    Tier: 1
+    Position: {x: 0.50911456, y: 0.8642578}
+  - Side: 1
+    Lane: 0
+    Tier: 2
+    Position: {x: 0.7421875, y: 0.8642578}
+  - Side: 1
+    Lane: 1
+    Tier: 1
+    Position: {x: 0.5963542, y: 0.5722656}
+  - Side: 1
+    Lane: 1
+    Tier: 2
+    Position: {x: 0.7239583, y: 0.6347656}
+  - Side: 1
+    Lane: 2
+    Tier: 1
+    Position: {x: 0.84244794, y: 0.171875}
+  - Side: 1
+    Lane: 2
+    Tier: 2
+    Position: {x: 0.9583333, y: 0.4658203}
+  lanes:
+  - Lane: 0
+    Points:
+    - {x: 0.15104167, y: 0.36035156}
+    - {x: 0.084635414, y: 0.40429688}
+    - {x: 0.048828125, y: 0.4921875}
+    - {x: 0.042317707, y: 0.58496094}
+    - {x: 0.052083332, y: 0.70703125}
+    - {x: 0.091145836, y: 0.8144531}
+    - {x: 0.1595052, y: 0.86816406}
+    - {x: 0.234375, y: 0.8828125}
+    - {x: 0.29947916, y: 0.86328125}
+    - {x: 0.36458334, y: 0.8046875}
+    - {x: 0.44270834, y: 0.7998047}
+    - {x: 0.5045573, y: 0.86328125}
+    - {x: 0.5859375, y: 0.875}
+    - {x: 0.65755206, y: 0.81933594}
+    - {x: 0.74088544, y: 0.8652344}
+    - {x: 0.8170573, y: 0.8779297}
+    - {x: 0.859375, y: 0.81933594}
+    - {x: 0.8626302, y: 0.74609375}
+    - {x: 0.84765625, y: 0.6826172}
+  - Lane: 1
+    Points:
+    - {x: 0.15104167, y: 0.36035156}
+    - {x: 0.21484375, y: 0.39257812}
+    - {x: 0.2734375, y: 0.4140625}
+    - {x: 0.33854166, y: 0.44628906}
+    - {x: 0.40039062, y: 0.47753906}
+    - {x: 0.46875, y: 0.51464844}
+    - {x: 0.5338542, y: 0.5439453}
+    - {x: 0.59375, y: 0.5722656}
+    - {x: 0.65755206, y: 0.6044922}
+    - {x: 0.72265625, y: 0.63378906}
+    - {x: 0.78125, y: 0.66015625}
+    - {x: 0.84765625, y: 0.6826172}
+  - Lane: 2
+    Points:
+    - {x: 0.15104167, y: 0.36035156}
+    - {x: 0.12695312, y: 0.2578125}
+    - {x: 0.16927083, y: 0.18945312}
+    - {x: 0.25520834, y: 0.1796875}
+    - {x: 0.32552084, y: 0.19726562}
+    - {x: 0.40364584, y: 0.2109375}
+    - {x: 0.49153647, y: 0.1796875}
+    - {x: 0.56640625, y: 0.19921875}
+    - {x: 0.625, y: 0.23339844}
+    - {x: 0.6901042, y: 0.2265625}
+    - {x: 0.7552083, y: 0.1875}
+    - {x: 0.83984375, y: 0.171875}
+    - {x: 0.9114583, y: 0.21386719}
+    - {x: 0.9505208, y: 0.31640625}
+    - {x: 0.9557292, y: 0.46777344}
+    - {x: 0.9407552, y: 0.5800781}
+    - {x: 0.9082031, y: 0.6582031}
+    - {x: 0.84765625, y: 0.6826172}
+  zones:
+  - Type: 2
+    Position: {x: 0.36458334, y: 0.8046875}
+    Radius: 0.035807293
+  - Type: 2
+    Position: {x: 0.52734375, y: 0.5410156}
+    Radius: 0.035807293
+  - Type: 2
+    Position: {x: 0.65755206, y: 0.22851562}
+    Radius: 0.035807293
+  accentLights:
+  - Position: {x: 0.20833333, y: 0.53125}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.4296875, y: 0.71191406}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.78776044, y: 0.54589844}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.56640625, y: 0.35546875}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.29296875, y: 0.9609375}
+    Color: {r: 0.35, g: 0.85, b: 1, a: 1}
+    Radius: 1.5
+    Intensity: 1.4
+    Flicker: 0.15
+  - Position: {x: 0.36458334, y: 0.74609375}
+    Color: {r: 0.35, g: 0.85, b: 1, a: 1}
+    Radius: 1.5
+    Intensity: 1.4
+    Flicker: 0.15
+  - Position: {x: 0.44921875, y: 0.609375}
+    Color: {r: 0.35, g: 0.85, b: 1, a: 1}
+    Radius: 1.5
+    Intensity: 1.4
+    Flicker: 0.15
+  - Position: {x: 0.5598958, y: 0.39453125}
+    Color: {r: 0.35, g: 0.85, b: 1, a: 1}
+    Radius: 1.5
+    Intensity: 1.4
+    Flicker: 0.15
+  - Position: {x: 0.6510417, y: 0.21875}
+    Color: {r: 0.35, g: 0.85, b: 1, a: 1}
+    Radius: 1.5
+    Intensity: 1.4
+    Flicker: 0.15
+  - Position: {x: 0.70963544, y: 0.0625}
+    Color: {r: 0.35, g: 0.85, b: 1, a: 1}
+    Radius: 1.5
+    Intensity: 1.4
+    Flicker: 0.15
+  featureType: 4
+  featureName: "\u0421\u0442\u0443\u0436\u0430"
+  featureDescription: "\u0412\u0441\u0435 \u044E\u043D\u0438\u0442\u044B \u0434\u0432\u0438\u0436\u0443\u0442\u0441\u044F
+    \u043D\u0430 20 % \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435, \u043D\u043E
+    \u043F\u043E \u043B\u044C\u0434\u0443 \u0440\u0435\u043A\u0438 \u2014 \u043D\u0430
+    25 % \u0431\u044B\u0441\u0442\u0440\u0435\u0435."
+  featurePeriodSeconds: 0
+  featurePrimaryValue: 0.8
+  featureSecondaryValue: 1.25

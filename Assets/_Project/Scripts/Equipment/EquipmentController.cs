@@ -7,6 +7,7 @@ using Solutio.Items;
 using Solutio.Session;
 using Solutio.UI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Solutio.Equipment
 {
@@ -34,6 +35,12 @@ namespace Solutio.Equipment
         [Tooltip("Пауза после завершения драфта, чтобы пользователь увидел итоговые составы, секунды реального времени.")]
         [SerializeField, Range(0f, 5f)] private float transitionDelaySeconds = 1.5f;
 
+        [Header("Battle Transition (День 14)")]
+        [Tooltip("Имя боевой сцены в Build Settings.")]
+        [SerializeField] private string battleSceneName = "BattleMap";
+        [Tooltip("Пауза после «В БОЙ» перед загрузкой поля боя, секунды реального времени.")]
+        [SerializeField, Range(0f, 5f)] private float battleLoadDelaySeconds = 1.2f;
+
         [Header("Debug")]
         [SerializeField] private bool enableDetailedLogging = true;
 
@@ -60,6 +67,8 @@ namespace Solutio.Equipment
         private int _aiOptimal;
         private int _aiTotal;
         private bool _isSubscribed;
+        private bool _battleLoadPending;
+        private double _battleLoadAt;
 
         #region Unity Lifecycle
 
@@ -160,6 +169,13 @@ namespace Solutio.Equipment
                 DraftResult draft = _pendingDraft;
                 _pendingDraft = null;
                 BeginPreparation(draft);
+            }
+
+            // Переход подготовка → поле боя тоже по метке реального времени.
+            if (_battleLoadPending && Time.realtimeSinceStartupAsDouble >= _battleLoadAt)
+            {
+                _battleLoadPending = false;
+                LoadBattleScene();
             }
         }
 
@@ -390,8 +406,8 @@ namespace Solutio.Equipment
             LastResult = result;
 
             string message = _userLoadout.Stash.Count > 0
-                ? $"Экипировка зафиксирована, в хранилище осталось предметов: {_userLoadout.Stash.Count}. Автобой — следующий этап"
-                : "Экипировка зафиксирована. Автобой — следующий этап";
+                ? $"Экипировка зафиксирована, в хранилище осталось предметов: {_userLoadout.Stash.Count}. Загрузка поля боя…"
+                : "Экипировка зафиксирована. Загрузка поля боя…";
 
             view.SetLocked(message);
 
@@ -411,6 +427,27 @@ namespace Solutio.Equipment
             }
 
             OnEquipmentCompleted?.Invoke(result);
+
+            _battleLoadPending = true;
+            _battleLoadAt = Time.realtimeSinceStartupAsDouble + battleLoadDelaySeconds;
+        }
+
+        private void LoadBattleScene()
+        {
+            if (string.IsNullOrEmpty(battleSceneName) || !Application.CanStreamedLevelBeLoaded(battleSceneName))
+            {
+                Debug.LogError($"<color=#307082>[Equipment]</color> Сцена «{battleSceneName}» не добавлена в Build Settings — выполните «Solutio → Собрать BattleMap».", this);
+                view.ShowStatus($"Сцена боя «{battleSceneName}» не найдена в Build Settings", true);
+                return;
+            }
+
+            if (enableDetailedLogging)
+            {
+                Debug.Log($"<color=#307082>[Equipment]</color> Загрузка сцены «{battleSceneName}» (карта: {_session?.Map.DisplayName}).");
+            }
+
+            // Single: сцена меню выгружается, ActiveSession и LastResult — статические и переживают смену сцены.
+            SceneManager.LoadSceneAsync(battleSceneName, LoadSceneMode.Single);
         }
 
         private void HandleLeaveRequested()
@@ -440,6 +477,7 @@ namespace Solutio.Equipment
         private void StopPreparation()
         {
             IsActive = false;
+            _battleLoadPending = false;
             _pendingDraft = null;
             _userLoadout = null;
             _aiLoadout = null;

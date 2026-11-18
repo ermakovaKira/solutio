@@ -8,4 +8,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/MainMenu.unity
     guid: 4ae07a142f59ed441994159ba510dbda
+  - enabled: 1
+    path: Assets/_Project/Scenes/BattleMap.unity
+    guid: e13db38782b24cc41b2912a32a61a79d
   m_configObjects: {}

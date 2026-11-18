@@ -1,0 +1,180 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4702ed2bc8b26af4e9b7ad7a22cfcb7d, type: 3}
+  m_Name: MapProfile_CrimsonWastes
+  m_EditorClassIdentifier: Assembly-CSharp::Solutio.Battle.MapProfile
+  mapKey: CrimsonWastes
+  background: {fileID: 21300000, guid: 639d3364608ca50419fa601c15cce22e, type: 3}
+  globalLightColor: {r: 0.78, g: 0.42, b: 0.44, a: 1}
+  globalLightIntensity: 0.55
+  structureScale: 1.15
+  towerPlinthScaleY: 1.3
+  userLightColor: {r: 0.25, g: 0.6, b: 1, a: 1}
+  aiLightColor: {r: 1, g: 0.18, b: 0.2, a: 1}
+  towerLightRadius: 1.4
+  towerLightIntensity: 1.4
+  baseLightRadius: 2.6
+  baseLightIntensity: 1.6
+  bloomIntensity: 1
+  bloomThreshold: 0.85
+  bloomTint: {r: 1, g: 0.7, b: 0.65, a: 1}
+  vignetteIntensity: 0.32
+  userBase: {x: 0.14322917, y: 0.3017578}
+  aiBase: {x: 0.88216144, y: 0.74121094}
+  towers:
+  - Side: 0
+    Lane: 0
+    Tier: 2
+    Position: {x: 0.12890625, y: 0.56640625}
+  - Side: 0
+    Lane: 0
+    Tier: 1
+    Position: {x: 0.1907552, y: 0.82910156}
+  - Side: 0
+    Lane: 1
+    Tier: 2
+    Position: {x: 0.3138021, y: 0.37695312}
+  - Side: 0
+    Lane: 1
+    Tier: 1
+    Position: {x: 0.4388021, y: 0.4609375}
+  - Side: 0
+    Lane: 2
+    Tier: 2
+    Position: {x: 0.33789062, y: 0.19921875}
+  - Side: 0
+    Lane: 2
+    Tier: 1
+    Position: {x: 0.5436198, y: 0.1953125}
+  - Side: 1
+    Lane: 0
+    Tier: 1
+    Position: {x: 0.47981772, y: 0.8300781}
+  - Side: 1
+    Lane: 0
+    Tier: 2
+    Position: {x: 0.6829427, y: 0.8261719}
+  - Side: 1
+    Lane: 1
+    Tier: 1
+    Position: {x: 0.7291667, y: 0.6464844}
+  - Side: 1
+    Lane: 1
+    Tier: 2
+    Position: {x: 0.80338544, y: 0.6982422}
+  - Side: 1
+    Lane: 2
+    Tier: 1
+    Position: {x: 0.8515625, y: 0.19921875}
+  - Side: 1
+    Lane: 2
+    Tier: 2
+    Position: {x: 0.9186198, y: 0.46484375}
+  lanes:
+  - Lane: 0
+    Points:
+    - {x: 0.14322917, y: 0.3017578}
+    - {x: 0.13346355, y: 0.4140625}
+    - {x: 0.12890625, y: 0.56347656}
+    - {x: 0.13346355, y: 0.70703125}
+    - {x: 0.14322917, y: 0.7998047}
+    - {x: 0.18880208, y: 0.8261719}
+    - {x: 0.29296875, y: 0.828125}
+    - {x: 0.390625, y: 0.828125}
+    - {x: 0.47981772, y: 0.82910156}
+    - {x: 0.5859375, y: 0.82910156}
+    - {x: 0.6816406, y: 0.82910156}
+    - {x: 0.7682292, y: 0.82421875}
+    - {x: 0.8235677, y: 0.78515625}
+    - {x: 0.88216144, y: 0.74121094}
+  - Lane: 1
+    Points:
+    - {x: 0.14322917, y: 0.3017578}
+    - {x: 0.22786458, y: 0.34375}
+    - {x: 0.3138021, y: 0.3779297}
+    - {x: 0.37760416, y: 0.4189453}
+    - {x: 0.43815103, y: 0.4609375}
+    - {x: 0.5208333, y: 0.51660156}
+    - {x: 0.6041667, y: 0.5683594}
+    - {x: 0.67057294, y: 0.609375}
+    - {x: 0.72786456, y: 0.6484375}
+    - {x: 0.80403644, y: 0.6972656}
+    - {x: 0.8463542, y: 0.7216797}
+    - {x: 0.88216144, y: 0.74121094}
+  - Lane: 2
+    Points:
+    - {x: 0.14322917, y: 0.3017578}
+    - {x: 0.20833333, y: 0.21875}
+    - {x: 0.2734375, y: 0.19726562}
+    - {x: 0.33658853, y: 0.19726562}
+    - {x: 0.44270834, y: 0.19726562}
+    - {x: 0.5423177, y: 0.19726562}
+    - {x: 0.6510417, y: 0.19726562}
+    - {x: 0.74869794, y: 0.19726562}
+    - {x: 0.8496094, y: 0.19726562}
+    - {x: 0.90494794, y: 0.23828125}
+    - {x: 0.91796875, y: 0.3359375}
+    - {x: 0.91796875, y: 0.46484375}
+    - {x: 0.9114583, y: 0.58984375}
+    - {x: 0.8984375, y: 0.6777344}
+    - {x: 0.88216144, y: 0.74121094}
+  zones: []
+  accentLights:
+  - Position: {x: 0.33854166, y: 0.7167969}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.54036456, y: 0.30664062}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.6933594, y: 0.3017578}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.82682294, y: 0.38476562}
+    Color: {r: 0.72, g: 0.32, b: 1, a: 1}
+    Radius: 1
+    Intensity: 1.6
+    Flicker: 0.25
+  - Position: {x: 0.45572916, y: 0.9707031}
+    Color: {r: 1, g: 0.3, b: 0.15, a: 1}
+    Radius: 2.5
+    Intensity: 1.6
+    Flicker: 0.15
+  - Position: {x: 0.5078125, y: 0.6777344}
+    Color: {r: 0.9, g: 0.2, b: 0.12, a: 1}
+    Radius: 1.6
+    Intensity: 0.9
+    Flicker: 0.2
+  - Position: {x: 0.5989583, y: 0.4140625}
+    Color: {r: 0.9, g: 0.2, b: 0.12, a: 1}
+    Radius: 1.6
+    Intensity: 0.9
+    Flicker: 0.2
+  - Position: {x: 0.6901042, y: 0.16015625}
+    Color: {r: 0.9, g: 0.2, b: 0.12, a: 1}
+    Radius: 1.6
+    Intensity: 0.9
+    Flicker: 0.2
+  featureType: 3
+  featureName: "\u0421\u0435\u0447\u0430"
+  featureDescription: "\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0435 \u043F\u0440\u044F\u043C\u044B\u0435
+    \u043B\u0438\u043D\u0438\u0438 \u0438 \u0449\u0435\u0434\u0440\u0430\u044F \u043D\u0430\u0433\u0440\u0430\u0434\u0430:
+    \u0437\u043E\u043B\u043E\u0442\u043E \u0437\u0430 \u0443\u0431\u0438\u0439\u0441\u0442\u0432\u0430
+    \xD71,5."
+  featurePeriodSeconds: 0
+  featurePrimaryValue: 1.5
+  featureSecondaryValue: 0
